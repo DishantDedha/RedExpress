@@ -1,0 +1,19 @@
+{
+  "name": "red-express",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Red Express — blood donation platform (backend API, mobile app, staff CRM).",
+  "workspaces": [
+    "backend",
+    "mobile",
+    "crm"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace backend",
+    "dev:crm": "npm run dev --workspace crm",
+    "dev:mobile": "npm run start --workspace mobile"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "Red Express",
+    "slug": "red-express",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "redexpress",
+    "backgroundColor": "#F7F7F9",
+    "splash": {
+      "backgroundColor": "#B00020",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.redexpress.app",
+      "infoPlist": {
+        "CFBundleAllowMixedLocalizations": true
+      }
+    },
+    "android": {
+      "package": "com.redexpress.app",
+      "edgeToEdgeEnabled": true,
+      "adaptiveIcon": {
+        "backgroundColor": "#B00020"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Red Express uses your location to find blood donors near you, and to alert you when someone nearby needs your blood group."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Red Express needs access to your photos so you can add a profile picture to your donor record.",
+          "cameraPermission": "Red Express needs your camera so you can take a profile picture for your donor record."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#B00020",
+          "defaultChannel": "blood-requests"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
+    }
+  }
+}

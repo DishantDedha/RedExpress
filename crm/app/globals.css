@@ -1,0 +1,111 @@
+@import 'tailwindcss';
+
+/**
+ * Design tokens for the staff dashboard.
+ *
+ * The palette is copied deliberately from mobile/theme/index.js so the two clients agree on
+ * what "Red Express red" is, and — more importantly — inherits its contrast work: every
+ * value below was measured against the surface it is used on and clears WCAG AA
+ * (4.5:1 for text, 3:1 for control outlines and focus rings). The ratio in each comment is
+ * the measured figure. Change a hex here and you have changed it for a staff member with
+ * low vision, so re-measure before you do.
+ */
+@theme {
+  --color-brand: #b00020; /* 7.33:1 on white — primary buttons, active nav, headings */
+  --color-brand-pressed: #8c0019; /* 9.86:1 on white — hover/active fill */
+  --color-brand-ink: #8a0016; /* 8.51:1 on brand-tint — text on a tinted surface */
+  --color-brand-tint: #fde7eb; /* decorative fill only */
+
+  --color-ink: #1b1b1f; /* 17.17:1 on white — body copy */
+  --color-ink-muted: #5a5d66; /* 6.58:1 on white — captions. "Muted" still has to be readable */
+  --color-ink-disabled: #6b6f78; /* 5.04:1 on white */
+
+  --color-line: #c4c7cf; /* decorative divider, never encloses a control */
+  --color-line-strong: #878a93; /* 3.45:1 on white — input outlines, table borders */
+
+  --color-surface: #f7f7f9; /* page background */
+  --color-card: #ffffff; /* raised surface */
+
+  /* Status colours. Every one of these is paired with a word in the UI — colour alone is
+     not allowed to carry meaning (WCAG 1.4.1) and reaches nobody using a screen reader. */
+  --color-success: #1b5e20; /* 7.87:1 on white */
+  --color-success-tint: #e6f4e7;
+  --color-danger: #b3261e; /* 6.54:1 on white */
+  --color-danger-tint: #fdecea;
+  --color-warning: #8a5300; /* 6.33:1 on white */
+  --color-warning-tint: #fdf3e0;
+  --color-info: #0b5394; /* 7.84:1 on white */
+  --color-info-tint: #e7f0fa;
+}
+
+@layer base {
+  html {
+    /* Staff often run the OS zoomed; nothing here fixes a font size in px on the root. */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    font-family: ui-sans-serif, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  /**
+   * One focus ring for the whole app, and it is never removed.
+   * :focus-visible rather than :focus so a mouse click on a button does not draw it, but a
+   * Tab key press always does — the dashboard has to be fully keyboard-operable.
+   */
+  :focus-visible {
+    outline: 3px solid var(--color-brand);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Respect a staff member's reduced-motion setting rather than animating regardless. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer base {
+  /**
+   * The native <dialog> backdrop.
+   *
+   * Dark enough to make it unmistakable that the page behind is no longer in play — a
+   * confirmation for an action that ends someone's session should not look like a tooltip.
+   * `::backdrop` only exists for dialogs opened with showModal(), which is the only way
+   * ConfirmDialog opens them.
+   */
+  dialog::backdrop {
+    background-color: rgb(0 0 0 / 0.55);
+  }
+
+  /* Centred by the browser; this only stops a long note field pushing the dialog off screen. */
+  dialog {
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+  }
+}
+
+@layer components {
+  /**
+   * Visually hidden, but still read by screen readers and still focusable.
+   * Used by the skip link and by labels that would be redundant on screen.
+   */
+  .sr-only-focusable:not(:focus):not(:active) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

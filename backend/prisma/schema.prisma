@@ -1,0 +1,336 @@
+// Red Express — database schema
+//
+// Plain PostgreSQL. NO PostGIS and no extensions of any kind.
+// Geography is stored as two ordinary Float columns (latitude, longitude); distance is
+// computed in application code with the Haversine formula (see services/geo.js, Phase 4).
+// Proximity queries run bounding-box first (indexed) then exact Haversine in JS.
+//
+// The connection URL lives in prisma.config.mjs / DATABASE_URL, not in this file —
+// Prisma 7 removed `url` from the datasource block.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  DONOR
+  RECEIVER
+  STAFF
+  ADMIN
+}
+
+/// ACTIVE   — normal; appears in search and receives notifications.
+/// DEAD     — staff could not reach them; hidden from search. Cleared when the user
+///            re-verifies via OTP (see docs/crm-lifecycle.md).
+/// BLOCKED  — administratively barred; rejected at the auth middleware, not self-recoverable.
+enum UserStatus {
+  ACTIVE
+  DEAD
+  BLOCKED
+}
+
+enum BloodGroup {
+  A_POS
+  A_NEG
+  B_POS
+  B_NEG
+  O_POS
+  O_NEG
+  AB_POS
+  AB_NEG
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum Urgency {
+  NORMAL
+  URGENT
+  CRITICAL
+}
+
+enum RequestStatus {
+  OPEN
+  FULFILLED
+  CANCELLED
+  EXPIRED
+}
+
+enum MatchResponse {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum CallOutcome {
+  PICKED_UP
+  NO_ANSWER
+  WRONG_NUMBER
+  MARKED_DEAD
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+/// Everyone in the system: app users (DONOR/RECEIVER, phone + OTP) and CRM users
+/// (STAFF/ADMIN, email + password). Hence phone, email and passwordHash are all nullable.
+model User {
+  id     String  @id @default(cuid())
+  phone  String? @unique
+  email  String? @unique
+  name   String
+  /// bcrypt hash — staff/admin only. App users authenticate by OTP.
+  passwordHash String?
+
+  role   Role
+  status UserStatus @default(ACTIVE)
+
+  isPhoneVerified Boolean @default(false)
+
+  /// Coarse location, used by RECEIVER users — they register with just state/district
+  /// (Phase 3 quick form) and get no DonorProfile. For a DONOR the authoritative copy of
+  /// the address and coordinates lives on DonorProfile; these columns stay null for them
+  /// so proximity search has exactly one place to look.
+  state     String?
+  district  String?
+  city      String?
+  latitude  Float?
+  longitude Float?
+
+  /// Incremented to invalidate every outstanding JWT for this user at once.
+  /// requireAuth compares the token's claim against this value; a mismatch is a 401.
+  /// This is what makes "mark donor dead" a forced logout.
+  tokenVersion Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  donorProfile  DonorProfile?
+  bloodRequests BloodRequest[] @relation("RequesterRequests")
+  matches       RequestMatch[]
+  notifications Notification[]
+  deviceTokens  DeviceToken[]
+  callsMade     CallLog[]      @relation("StaffCalls")
+  callsReceived CallLog[]      @relation("DonorCalls")
+  auditsMade    AuditLog[]     @relation("AuditActor")
+  auditsAbout   AuditLog[]     @relation("AuditTarget")
+
+  @@index([status])
+  @@index([role, status])
+  /// Backs the CRM's user search by administrative area.
+  @@index([state, district])
+}
+
+/// One-to-one extension of a DONOR user.
+model DonorProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bloodGroup BloodGroup
+  gender     Gender
+  /// Nullable: the donor registration form (Phase 3 / mockup image 6) does not ask for a
+  /// birth date, so it is only present for donors created by seed or edited later. When it
+  /// is supplied the API enforces the 18-65 donation age range.
+  dateOfBirth      DateTime?
+  lastDonationDate DateTime?
+  isAvailable      Boolean   @default(true)
+
+  state    String
+  district String
+  city     String
+  pincode  String
+  address  String
+
+  profilePhotoUrl String?
+
+  /// Plain Float columns — no PostGIS. Nullable because a donor may register without
+  /// granting location permission; they are then matched by administrative area instead.
+  latitude  Float?
+  longitude Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bloodGroup])
+  @@index([state, district, city])
+  /// Supports the bounding-box pre-filter that keeps radius search fast without PostGIS.
+  @@index([latitude, longitude])
+  @@index([bloodGroup, isAvailable])
+}
+
+model BloodRequest {
+  id          String @id @default(cuid())
+  requesterId String
+  requester   User   @relation("RequesterRequests", fields: [requesterId], references: [id], onDelete: Cascade)
+
+  bloodGroup   BloodGroup
+  unitsNeeded  Int
+  hospitalName String
+  contactPhone String
+  urgency      Urgency    @default(NORMAL)
+  note         String?
+
+  state    String?
+  district String?
+  city     String?
+
+  latitude  Float?
+  longitude Float?
+
+  status RequestStatus @default(OPEN)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime
+
+  matches  RequestMatch[]
+  callLogs CallLog[]
+
+  @@index([status])
+  @@index([bloodGroup])
+  @@index([state, district, city])
+  @@index([latitude, longitude])
+  @@index([status, createdAt])
+}
+
+/// A candidate donor computed for a request by the matching engine (Phase 4),
+/// carrying the distance at match time and the donor's answer.
+model RequestMatch {
+  id        String       @id @default(cuid())
+  requestId String
+  request   BloodRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  donorUserId String
+  donor       User   @relation(fields: [donorUserId], references: [id], onDelete: Cascade)
+
+  /// Kilometres between the request and the donor at match time, frozen so the CRM
+  /// worklist keeps its ordering even after a donor moves. Nullable because the
+  /// administrative-area fallback matches donors who never shared coordinates — there is
+  /// no honest number to put here, and 0 would sort them to the top of the call list.
+  distanceKm  Float?
+  notifiedAt  DateTime?
+  response    MatchResponse @default(PENDING)
+  respondedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([requestId, donorUserId])
+  @@index([donorUserId, response])
+  @@index([requestId, distanceKm])
+}
+
+/// In-app inbox row, written alongside every push so history survives the notification tray.
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type  String
+  title String
+  body  String
+  data  Json?
+
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
+/// Only the bcrypt hash of the code is stored — never the code itself.
+model OtpCode {
+  id    String @id @default(cuid())
+  phone String
+
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  /// Serves both "latest code for this phone" lookups and the per-phone request rate limit.
+  @@index([phone, createdAt])
+  @@index([expiresAt])
+}
+
+/// A staff member's attempt to reach a donor by phone.
+model CallLog {
+  id      String @id @default(cuid())
+  staffId String
+  staff   User   @relation("StaffCalls", fields: [staffId], references: [id])
+
+  donorUserId String
+  donor       User   @relation("DonorCalls", fields: [donorUserId], references: [id], onDelete: Cascade)
+
+  requestId String?
+  request   BloodRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  outcome CallOutcome
+  note    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([donorUserId, createdAt])
+  @@index([staffId, createdAt])
+  @@index([requestId])
+}
+
+/// Who did what to whose account, and why.
+///
+/// CallLog already records "we rang this donor". This records the administrative
+/// consequences — marking a donor dead, reactivating them — which are the actions that
+/// take a person out of search or put them back in, and are the ones an operations lead
+/// will be asked to justify. `note` is the staff member's own words; `metadata` keeps the
+/// machine-readable before/after so a status change can be reconstructed exactly.
+model AuditLog {
+  id String @id @default(cuid())
+
+  /// The staff/admin account that performed the action. Never deleted out from under an
+  /// audit row — an audit trail with a missing author is not an audit trail.
+  actorId String
+  actor   User   @relation("AuditActor", fields: [actorId], references: [id])
+
+  /// The account the action was performed on. Cascades: once a user is erased there is no
+  /// subject left to be accountable about, and keeping the row would keep their id.
+  targetUserId String?
+  targetUser   User?   @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  /// Free string rather than an enum so a new sensitive action does not need a migration.
+  /// Values in use: DONOR_MARKED_DEAD, DONOR_REACTIVATED.
+  action   String
+  note     String?
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([targetUserId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+}
+
+model DeviceToken {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  expoPushToken String @unique
+  platform      String
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}

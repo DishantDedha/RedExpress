@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node src/server.js > /c/Users/PC/AppData/Local/Temp/claude/c--Users-PC-Desktop-RedExpress/66c3782d-1b06-4220-9b50-f0354ba23304/scratchpad/server.log 2>&1)",
+      "PowerShell($r = Invoke-WebRequest -Uri http://localhost:4000/health -UseBasicParsing; $r.Content)",
+      "PowerShell(npm run smoke:requests --workspace backend)",
+      "PowerShell(npm run db:generate --workspace backend 2>&1)",
+      "Bash(node /c/Users/PC/Desktop/RedExpress/backend/src/server.js)",
+      "Bash(sleep 1; cat /c/Users/PC/AppData/Local/Temp/claude/c--Users-PC-Desktop-RedExpress/66c3782d-1b06-4220-9b50-f0354ba23304/scratchpad/server.log)",
+      "Read(//c/Users/PC/AppData/Local/Temp/claude/c--Users-PC-Desktop-RedExpress/66c3782d-1b06-4220-9b50-f0354ba23304/scratchpad/**)",
+      "PowerShell(npm run start --workspace backend)",
+      "PowerShell(Invoke-WebRequest -Uri http://localhost:4000/health -UseBasicParsing)",
+      "Bash(npm run *)",
+      "Bash(break)",
+      "Bash(node -e ' *)",
+      "Bash(python -)",
+      "Read(//c/Users/PC/AppData/Local/Temp/claude/c--Users-PC-Desktop-RedExpress/5c74bf94-2a0b-497e-9b99-7a08a3185ee5/scratchpad/**)",
+      "Bash(curl -s -m 3 http://localhost:4000/health)",
+      "Bash(powershell -NoProfile -Command \"Get-Process node -ErrorAction SilentlyContinue | Select-Object Id,StartTime | Format-Table -AutoSize\")",
+      "Bash(kill %bxsj1od7g)",
+      "Bash(powershell -NoProfile -Command \"Stop-Process -Id 64348,71468 -Force -ErrorAction SilentlyContinue\")",
+      "Bash(npm start *)",
+      "Bash(grep -A4 \"push:console\" /c/Users/PC/AppData/Local/Temp/claude/c--Users-PC-Desktop-RedExpress/5c74bf94-2a0b-497e-9b99-7a08a3185ee5/scratchpad/api.log | head -20)",
+      "Bash(kill %b4g2cjv7y)",
+      "Bash(powershell -NoProfile -Command 'Get-CimInstance Win32_Process -Filter \"Name='\\\\''node.exe'\\\\''\" | Where-Object { $_.CommandLine -like '\\\\''*src/server.js*'\\\\'' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }')",
+      "PowerShell(Get-NetTCPConnection -LocalPort 4000 -State Listen | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force; \"killed $\\($_.OwningProcess\\)\" })",
+      "PowerShell(Get-NetTCPConnection -LocalPort 4000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force; \"stopped $\\($_.OwningProcess\\)\" })",
+      "Bash(node \"C:/Users/PC/AppData/Local/Temp/claude/c--Users-PC-Desktop-RedExpress/1e1b17c2-f510-418c-a9a9-5099bafebd72/scratchpad/contrast.mjs\")",
+      "Bash(npx expo *)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\PC\\AppData\\Local\\Temp\\claude\\c--Users-PC-Desktop-RedExpress\\66c3782d-1b06-4220-9b50-f0354ba23304\\scratchpad",
+      "C:\\Users\\PC\\AppData\\Local\\Temp\\claude\\c--Users-PC-Desktop-RedExpress\\5c74bf94-2a0b-497e-9b99-7a08a3185ee5\\scratchpad"
+    ]
+  }
+}
