@@ -1,0 +1,39 @@
+[Unit]
+Description=Red Express CRM (Next.js)
+Documentation=https://github.com/DishantDedha/RedExpress
+After=network-online.target redexpress-api.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=redexpress
+Group=redexpress
+
+# Next.js reads .env.local from its own directory. next itself is hoisted to the repo root by
+# npm workspaces, which is why the binary path is not under crm/.
+WorkingDirectory=/srv/redexpress/crm
+ExecStart=/srv/redexpress/node_modules/.bin/next start --port 3000
+Environment=NODE_ENV=production
+
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=redexpress-crm
+
+# --- Hardening -------------------------------------------------------------
+# The CRM never writes anything at runtime: .next is produced by the build step, and the
+# session cookies live in the browser. So it gets a wholly read-only filesystem.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

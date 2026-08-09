@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react';
-import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
 import { announce } from '../components/LiveMessage';
-import { configureNotifications, routeForNotification } from '../services/push';
+import { configureNotifications, loadNotifications, routeForNotification } from '../services/push';
 
 /**
  * Tapping "Urgent: O negative blood needed nearby" opens the request.
@@ -36,6 +35,11 @@ export function useNotificationRouting() {
   const handled = useRef(new Set());
 
   useEffect(() => {
+    // Null in Expo Go, where no notification can arrive to be routed anyway. Loaded through
+    // services/push so the guard lives in exactly one place — see `pushSupported` there.
+    const Notifications = loadNotifications();
+    if (!Notifications) return undefined;
+
     let active = true;
 
     function open(response, { cold }) {

@@ -8,11 +8,10 @@
     "newArchEnabled": true,
     "scheme": "redexpress",
     "backgroundColor": "#F7F7F9",
-    "splash": {
-      "backgroundColor": "#B00020",
-      "resizeMode": "contain"
-    },
-    "assetBundlePatterns": ["**/*"],
+    "icon": "./assets/icon.png",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.redexpress.app",
@@ -24,8 +23,13 @@
       "package": "com.redexpress.app",
       "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#B00020"
-      }
+      },
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -44,14 +48,25 @@
         "expo-image-picker",
         {
           "photosPermission": "Red Express needs access to your photos so you can add a profile picture to your donor record.",
-          "cameraPermission": "Red Express needs your camera so you can take a profile picture for your donor record."
+          "cameraPermission": "Red Express needs your camera so you can take a profile picture for your donor record.",
+          "microphonePermission": false
         }
       ],
       [
         "expo-notifications",
         {
+          "icon": "./assets/notification-icon.png",
           "color": "#B00020",
           "defaultChannel": "blood-requests"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#B00020"
         }
       ]
     ],
@@ -60,8 +75,10 @@
     },
     "extra": {
       "eas": {
-        "projectId": ""
-      }
-    }
+        "projectId": "a9e934be-707a-4317-a2fb-2351bb17ff98"
+      },
+      "router": {}
+    },
+    "owner": "dishantdedha"
   }
 }

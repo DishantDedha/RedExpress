@@ -262,6 +262,9 @@ Data protection:
 - [ ] `TRUST_PROXY` matches the actual number of proxies
 - [ ] `RATE_LIMIT_ENABLED` is not `false`
 - [ ] Two different JWT secrets, neither of them the placeholder
+- [ ] `OTP_MASTER_CODE` is **unset** — it verifies any phone number, and it exists only for
+      client demos before an SMS gateway is live. The API refuses to boot if it is set
+      alongside a real `SMS_PROVIDER`, so this box is really about not shipping a demo build.
 - [ ] `CRM_SESSION_SECRET` set; `CRM_COOKIE_SECURE=true`
 - [ ] HTTPS everywhere — an OTP over plain http is an OTP anyone on the network has
 - [ ] Storage bucket readable but **not listable**

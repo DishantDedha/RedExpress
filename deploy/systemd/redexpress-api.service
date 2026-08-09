@@ -1,0 +1,45 @@
+[Unit]
+Description=Red Express API (Express)
+Documentation=https://github.com/DishantDedha/RedExpress
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=redexpress
+Group=redexpress
+
+# dotenv reads .env from the process's working directory, so this must be the backend
+# workspace and not the repo root — config/env.js would otherwise find nothing and the
+# process would exit at boot complaining about JWT_ACCESS_SECRET.
+WorkingDirectory=/srv/redexpress/backend
+ExecStart=/usr/bin/node src/server.js
+
+# Restart on crash, but give up after 5 failures in 60s rather than looping forever. A
+# process that cannot read its own config will never recover by being restarted, and the
+# loop only buries the real error in the journal.
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=redexpress-api
+
+# --- Hardening -------------------------------------------------------------
+# This process holds the JWT signing secrets and can read every donor's address. It needs
+# almost nothing from the filesystem, so it is given almost nothing.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+# The only writable path, and only when STORAGE_DRIVER=local. With S3 it is never touched.
+ReadWritePaths=/srv/redexpress/backend/uploads
+
+[Install]
+WantedBy=multi-user.target

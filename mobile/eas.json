@@ -1,0 +1,50 @@
+{
+  "cli": {
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": false
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://REPLACE-ME.example.com",
+        "EXPO_PUBLIC_SUPPORT_EMAIL": "support@redexpress.example",
+        "EXPO_PUBLIC_PRIVACY_POLICY_URL": "https://REPLACE-ME.example.com/privacy",
+        "EXPO_PUBLIC_TERMS_URL": "https://REPLACE-ME.example.com/terms",
+        "EXPO_PUBLIC_ENABLE_VOICE_INPUT": "false"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://REPLACE-ME.example.com",
+        "EXPO_PUBLIC_SUPPORT_EMAIL": "support@redexpress.example",
+        "EXPO_PUBLIC_PRIVACY_POLICY_URL": "https://REPLACE-ME.example.com/privacy",
+        "EXPO_PUBLIC_TERMS_URL": "https://REPLACE-ME.example.com/terms",
+        "EXPO_PUBLIC_ENABLE_VOICE_INPUT": "false"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "track": "internal"
+      }
+    }
+  }
+}

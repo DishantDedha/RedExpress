@@ -1,7 +1,6 @@
 import { Platform } from 'react-native';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import { api } from './apiClient';
 import { config } from './config';
 import { logger } from './logger';
@@ -50,6 +49,46 @@ import { getPushToken, savePushToken } from './tokenStorage';
  */
 const ANDROID_CHANNEL_ID = 'blood-requests';
 
+/**
+ * True in Expo Go, false in a dev/production build.
+ *
+ * Expo Go dropped remote push in SDK 53, and on Android it does not merely fail at
+ * `getExpoPushTokenAsync` — *importing* `expo-notifications` throws outright. A top-level
+ * import here therefore took down every module that transitively pulls in this file, which
+ * includes the signed-in layout: the visible symptom was expo-router failing with
+ * "Cannot read property 'ErrorBoundary' of undefined", several frames away from the cause.
+ *
+ * So the native module is required lazily, only when it is safe to load, and every entry
+ * point below returns `status: 'unsupported'` in Expo Go instead. That status was already
+ * the contract with the UI (`components/PushConsent.js`, `app/(app)/privacy.js`) — it just
+ * could never be reached, because the import crashed first.
+ */
+export const pushSupported = Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
+
+let notificationsModule = null;
+
+/**
+ * The `expo-notifications` module, or null when it cannot be loaded.
+ *
+ * `require` rather than `import` is deliberate and is the whole point: Metro evaluates a
+ * module the first time it is required, so this defers the crash-prone load until after the
+ * guard has decided it is safe.
+ *
+ * @returns {typeof import('expo-notifications') | null}
+ */
+export function loadNotifications() {
+  if (!pushSupported) return null;
+  if (!notificationsModule) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+    notificationsModule = require('expo-notifications');
+  }
+  return notificationsModule;
+}
+
+/** The sentence every unsupported path says. One wording, so the app never contradicts itself. */
+const UNSUPPORTED_MESSAGE =
+  'Alerts need a development build of the app; they do not work in Expo Go. You will still see requests in the app.';
+
 let configured = false;
 
 /**
@@ -64,6 +103,11 @@ let configured = false;
  */
 export async function configureNotifications() {
   if (configured) return;
+
+  const Notifications = loadNotifications();
+  // Not marked configured: nothing was configured, and a later dev build should retry.
+  if (!Notifications) return;
+
   configured = true;
 
   Notifications.setNotificationHandler({
@@ -99,6 +143,9 @@ export async function configureNotifications() {
 export async function getPushPermissionStatus() {
   if (!Device.isDevice) return 'unsupported';
 
+  const Notifications = loadNotifications();
+  if (!Notifications) return 'unsupported';
+
   const { status, canAskAgain } = await Notifications.getPermissionsAsync();
   if (status === 'granted') return 'granted';
   // `canAskAgain: false` means the OS will never show the dialog again. Telling these two
@@ -129,6 +176,11 @@ function projectId() {
  */
 export async function registerForPush({ prompt = false } = {}) {
   await configureNotifications();
+
+  const Notifications = loadNotifications();
+  if (!Notifications) {
+    return { status: 'unsupported', message: UNSUPPORTED_MESSAGE };
+  }
 
   if (!Device.isDevice) {
     return {
@@ -180,13 +232,10 @@ export async function registerForPush({ prompt = false } = {}) {
     const result = await Notifications.getExpoPushTokenAsync({ projectId: id });
     token = result.data;
   } catch (error) {
-    // Expo Go on Android since SDK 53, and anything else the push service refuses.
+    // Anything the push service refuses — a dev build with no credentials, no network at
+    // the moment the token is minted, a revoked EAS project.
     logger.warn('[push] could not get an Expo push token', error);
-    return {
-      status: 'unsupported',
-      message:
-        'Alerts need a development build of the app; they do not work in Expo Go. You will still see requests in the app.',
-    };
+    return { status: 'unsupported', message: UNSUPPORTED_MESSAGE };
   }
 
   try {

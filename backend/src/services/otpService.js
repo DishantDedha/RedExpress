@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../config/prisma.js';
 import { env } from '../config/env.js';
 import { ApiError } from '../utils/errors.js';
+import { maskPhone } from '../utils/phone.js';
 import { sendSms } from './smsService.js';
 
 /**
@@ -14,6 +15,10 @@ import { sendSms } from './smsService.js';
  *  - requesting a new code retires the previous one, so only the newest text works;
  *  - OTP_REQUESTS_PER_WINDOW (3) codes per phone per OTP_RATE_LIMIT_WINDOW_MINUTES (15);
  *  - OTP_MAX_ATTEMPTS (5) wrong guesses burn the code.
+ *
+ * One exception, off by default: OTP_MASTER_CODE verifies any number, for handing to a client
+ * before an SMS gateway exists. It is a sign-in bypass — config/masterOtp.js holds the reasons
+ * and the guards that stop it outliving the demo.
  */
 
 function generateCode(length = env.otp.length) {
@@ -96,7 +101,22 @@ export async function verifyOtp(phone, code) {
     throw ApiError.badRequest('OTP_ATTEMPTS_EXCEEDED', 'Too many incorrect attempts. Request a new code.');
   }
 
-  const matches = await bcrypt.compare(code, record.codeHash);
+  /**
+   * The demo master code (config/masterOtp.js), checked here rather than before the lookup so
+   * it substitutes for exactly one thing: the comparison. Everything else still applies — a
+   * code must have been requested, it must not have expired, and the attempt ceiling still
+   * holds — which keeps the bypass inside the same rate limits as a real sign-in instead of
+   * opening a second, unmetered door.
+   *
+   * Logged every time, because an authentication bypass that leaves no trace is one nobody
+   * notices is still switched on.
+   */
+  const usedMasterCode = env.otp.masterCode !== null && code === env.otp.masterCode;
+  if (usedMasterCode) {
+    console.warn(`[otp] master code used for ${maskPhone(phone)} — demo bypass is enabled`);
+  }
+
+  const matches = usedMasterCode || (await bcrypt.compare(code, record.codeHash));
 
   if (!matches) {
     const updated = await prisma.otpCode.update({

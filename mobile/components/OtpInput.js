@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Platform, StyleSheet, TextInput, View } from 'react-native';
+import { Keyboard, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { AppText } from './AppText';
 import { announce } from './LiveMessage';
 import { focusOn } from '../hooks/useAccessibilityFocus';
@@ -40,6 +40,16 @@ import { colors, spacing, radius, typography, a11y } from '../theme';
  *
  * `accessibilityValue.text` is the digits separated by spaces. Without that, "4071" is read
  * as "four thousand and seventy-one", which is useless for checking a code.
+ *
+ * ## Why focus is managed by hand on Android
+ *
+ * Android raises the soft keyboard on a *focus change*, not on a tap. A field that is
+ * already focused therefore swallows taps silently, and the hidden caret means nothing on
+ * screen says it is focused — the six boxes simply stop responding. Three routes lead there,
+ * all handled below: `autoFocus` landing mid-transition (the request is dropped, the focus
+ * is not), dismissing the keyboard with the back button, and a tap that misses the
+ * transparent overlay. Anywhere else this is a cosmetic annoyance; on the one screen with no
+ * visible cursor it is a dead end.
  */
 
 export const OtpInput = forwardRef(function OtpInput(
@@ -70,14 +80,59 @@ export const OtpInput = forwardRef(function OtpInput(
   // Where the next digit will land — highlighted so a sighted user can see their place.
   const activeIndex = Math.min(value.length, length - 1);
 
+  /**
+   * Raise the keyboard, whatever state the field is in.
+   *
+   * The blur is the whole trick: Android ignores `focus()` on a field that already has it,
+   * so without dropping focus first this is a no-op exactly when it is needed most. The
+   * round trip through a frame is required too — blur and focus in the same tick collapse
+   * into no change at all.
+   */
+  function raiseKeyboard() {
+    const input = inputRef.current;
+    if (!input || !editable) return;
+
+    if (Platform.OS === 'android' && focused) {
+      input.blur();
+      requestAnimationFrame(() => inputRef.current?.focus());
+      return;
+    }
+    input.focus();
+  }
+
+  /**
+   * `autoFocus` is unreliable on Android: focus lands while the navigator is still animating
+   * this screen in, and the OS discards a soft-input request from a window that is not
+   * settled yet. The focus sticks, the keyboard does not, and because focus never changes
+   * again no later tap can bring it up. Focusing after the transition is what actually works.
+   *
+   * iOS keeps the declarative prop, where it behaves and fires sooner than this would.
+   */
+  useEffect(() => {
+    if (!autoFocus || Platform.OS !== 'android') return undefined;
+    const timer = setTimeout(() => inputRef.current?.focus(), 350);
+    return () => clearTimeout(timer);
+  }, [autoFocus]);
+
+  /**
+   * Dismissing the keyboard with the Android back button leaves the field focused, which is
+   * the same dead end by another route. Letting go of focus means the next tap is a real
+   * focus change, and the keyboard comes back.
+   */
+  useEffect(() => {
+    if (Platform.OS !== 'android') return undefined;
+    const subscription = Keyboard.addListener('keyboardDidHide', () => inputRef.current?.blur());
+    return () => subscription.remove();
+  }, []);
+
   useImperativeHandle(ref, () => ({
-    focus: () => inputRef.current?.focus(),
+    focus: raiseKeyboard,
     blur: () => inputRef.current?.blur(),
     clear: () => onChangeText?.(''),
     focusForAccessibility: () => focusOn(inputRef),
     focusAll: () => {
       focusOn(inputRef);
-      inputRef.current?.focus();
+      raiseKeyboard();
     },
   }));
 
@@ -166,6 +221,21 @@ export const OtpInput = forwardRef(function OtpInput(
           ))}
         </View>
 
+        {/*
+          Catches any tap the transparent input above does not take — a miss at the edge, or
+          a hit-test that went to the boxes. It sits *under* the input, so in the ordinary
+          case it never fires at all; it exists so that a tap on the code boxes can never do
+          nothing. Hidden from the accessibility tree: the input is the accessible element
+          here, and a second focusable node over the same pixels would give a screen reader
+          two things to find where there is one field.
+        */}
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={raiseKeyboard}
+          accessible={false}
+          importantForAccessibility="no-hide-descendants"
+        />
+
         <TextInput
           ref={inputRef}
           value={value}
@@ -173,7 +243,8 @@ export const OtpInput = forwardRef(function OtpInput(
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           editable={editable}
-          autoFocus={autoFocus}
+          // Android does its own, deferred — see the effect above.
+          autoFocus={Platform.OS === 'android' ? false : autoFocus}
           keyboardType="number-pad"
           inputMode="numeric"
           maxLength={length}

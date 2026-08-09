@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { parseMasterOtpCode } from './masterOtp.js';
 
 /**
  * Single place that reads process.env, so nothing else in the codebase has to guess
@@ -65,6 +66,11 @@ function oneOf(name, allowed, fallback) {
 
 const port = int('PORT', 4000);
 const isProduction = process.env.NODE_ENV === 'production';
+
+// Read ahead of the export: both the OTP block and the master-code validator need it, and the
+// validator's error messages quote it.
+const otpLength = int('OTP_LENGTH', 6);
+const smsProvider = process.env.SMS_PROVIDER ?? 'console';
 
 /**
  * Express's `trust proxy` setting. Behind a load balancer or a platform router the socket
@@ -158,11 +164,21 @@ export const env = {
   },
 
   otp: {
-    length: int('OTP_LENGTH', 6),
+    length: otpLength,
     expiryMinutes: int('OTP_EXPIRY_MINUTES', 5),
     maxAttempts: int('OTP_MAX_ATTEMPTS', 5),
     requestsPerWindow: int('OTP_REQUESTS_PER_WINDOW', 3),
     rateLimitWindowMinutes: int('OTP_RATE_LIMIT_WINDOW_MINUTES', 15),
+    /**
+     * One code that verifies any number, for handing to a client before an SMS gateway
+     * exists. Null unless OTP_MASTER_CODE is set. See config/masterOtp.js — it is a sign-in
+     * bypass, and the rules that stop it outliving the demo live there.
+     */
+    masterCode: parseMasterOtpCode({
+      raw: process.env.OTP_MASTER_CODE,
+      length: otpLength,
+      smsProvider,
+    }),
   },
 
   phone: {
@@ -255,7 +271,7 @@ export const env = {
   },
 
   sms: {
-    provider: process.env.SMS_PROVIDER ?? 'console',
+    provider: smsProvider,
     msg91: {
       authKey: process.env.MSG91_AUTH_KEY ?? '',
       senderId: process.env.MSG91_SENDER_ID ?? '',
