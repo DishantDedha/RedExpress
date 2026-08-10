@@ -19,10 +19,10 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://REPLACE-ME.example.com",
-        "EXPO_PUBLIC_SUPPORT_EMAIL": "support@redexpress.example",
-        "EXPO_PUBLIC_PRIVACY_POLICY_URL": "https://REPLACE-ME.example.com/privacy",
-        "EXPO_PUBLIC_TERMS_URL": "https://REPLACE-ME.example.com/terms",
+        "EXPO_PUBLIC_API_BASE_URL": "https://35-154-63-13.sslip.io",
+        "EXPO_PUBLIC_SUPPORT_EMAIL": "dishantdedha@gmail.com",
+        "EXPO_PUBLIC_PRIVACY_POLICY_URL": "",
+        "EXPO_PUBLIC_TERMS_URL": "",
         "EXPO_PUBLIC_ENABLE_VOICE_INPUT": "false"
       }
     },

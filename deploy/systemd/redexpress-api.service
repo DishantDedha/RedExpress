@@ -5,6 +5,12 @@ After=network-online.target postgresql.service
 Wants=network-online.target
 Requires=postgresql.service
 
+# Give up after 5 failed starts in 60s rather than looping forever. A process that cannot
+# read its own config will never recover by being restarted, and the loop only buries the
+# real error in the journal. These belong in [Unit] — systemd ignores them under [Service].
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
 [Service]
 Type=simple
 User=redexpress
@@ -16,13 +22,8 @@ Group=redexpress
 WorkingDirectory=/srv/redexpress/backend
 ExecStart=/usr/bin/node src/server.js
 
-# Restart on crash, but give up after 5 failures in 60s rather than looping forever. A
-# process that cannot read its own config will never recover by being restarted, and the
-# loop only buries the real error in the journal.
 Restart=on-failure
 RestartSec=5
-StartLimitBurst=5
-StartLimitIntervalSec=60
 
 StandardOutput=journal
 StandardError=journal

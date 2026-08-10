@@ -4,6 +4,10 @@ Documentation=https://github.com/DishantDedha/RedExpress
 After=network-online.target redexpress-api.service
 Wants=network-online.target
 
+# [Unit], not [Service] — systemd ignores these under [Service] with a warning.
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
 [Service]
 Type=simple
 User=redexpress
@@ -17,8 +21,6 @@ Environment=NODE_ENV=production
 
 Restart=on-failure
 RestartSec=5
-StartLimitBurst=5
-StartLimitIntervalSec=60
 
 StandardOutput=journal
 StandardError=journal
