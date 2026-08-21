@@ -1,0 +1,85 @@
+# Red Express API on Render — Blueprint.
+#
+# Render builds and runs the backend; the database lives on Neon. Render's own free Postgres
+# is deliberately not used: it is deleted 30 days after creation (14-day grace, then gone),
+# which during a testing phase means an unplanned migration on a date you do not choose.
+#
+# To deploy: Render dashboard -> New -> Blueprint -> point it at this repo. Render reads this
+# file, creates the service, and prompts for the four secrets marked `sync: false`.
+#
+# Region is Singapore because it is Render's closest point of presence to India; Oregon adds
+# roughly 200ms to every request for a service whose users are in Odisha.
+
+services:
+  - type: web
+    name: redexpress-api
+    runtime: node
+    plan: free
+    region: singapore
+    branch: main
+    autoDeploy: true
+
+    # npm workspaces keep the lockfile at the repo root, so the install runs from there.
+    # `-w backend` limits it to this workspace: a plain `npm ci` would also pull the mobile
+    # app's React Native toolchain, which is ~1 GB the API never loads and a large slice of
+    # the 500 free build minutes.
+    #
+    # Migrations run at build time on purpose. `db:deploy` applies only committed migrations
+    # and never generates one, so an unreachable database fails the build loudly instead of
+    # producing a service that boots and then 503s on every request.
+    buildCommand: |
+      npm ci --workspace backend --include-workspace-root || npm ci
+      npm run db:generate --workspace backend
+      npm run db:deploy --workspace backend
+
+    startCommand: npm start --workspace backend
+
+    # Liveness, not readiness. A readiness check that fails when the database blips would have
+    # Render restart the container, which does not fix a database.
+    healthCheckPath: /health
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Render terminates TLS at its own proxy, so the socket address the app sees is always
+      # internal. The rate limiters key on the client IP, and without this every caller in the
+      # country shares one bucket for OTP requests and password attempts.
+      - key: TRUST_PROXY
+        value: 1
+
+      - key: BCRYPT_ROUNDS
+        value: 12
+
+      # Uploads land on an ephemeral filesystem here — Render free has no persistent disk, so
+      # every profile photo is lost on each deploy. Acceptable for a prototype, and the fix is
+      # STORAGE_DRIVER=s3 with an ap-south-1 bucket. See deploy/render.md.
+      - key: STORAGE_DRIVER
+        value: local
+
+      - key: GEOCODER_PROVIDER
+        value: none
+
+      # Until DLT registration clears. `console` sends nothing, which is why OTP_MASTER_CODE
+      # exists — and why the API refuses to boot if a master code is still set once
+      # SMS_PROVIDER names a real gateway.
+      - key: SMS_PROVIDER
+        value: console
+
+      - key: PUSH_PROVIDER
+        value: console
+
+      # Prompted for on first deploy, then stored by Render. Never committed.
+      - key: DATABASE_URL          # Neon connection string
+        sync: false
+      - key: JWT_ACCESS_SECRET     # must differ from the refresh secret
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: OTP_MASTER_CODE       # demo bypass; remove before real SMS goes live
+        sync: false
+
+      # Set after the first deploy, once Render has assigned the hostname. Uploaded files are
+      # handed to clients as absolute URLs built from this.
+      - key: API_BASE_URL
+        sync: false

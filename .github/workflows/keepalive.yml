@@ -1,0 +1,58 @@
+# Keeps the Render free service awake.
+#
+# Render spins a free web service down after 15 minutes of inactivity, and waking it takes
+# 30–60 seconds. That delay is survivable while developing and unacceptable during a demo:
+# the first person to open the app in front of an audience waits a minute for a blank screen.
+#
+# The free plan grants 750 instance-hours per calendar month and a service running continuously
+# uses about 720, so keeping this one awake fits inside the allowance with ~30 hours to spare.
+# That headroom is why this pings a single service and why the interval is not shorter.
+#
+# `/health/ready` rather than `/health`: it touches the database, so the same ping also keeps
+# Neon's compute from suspending. One request, both problems.
+#
+# GitHub's scheduler is best-effort and can run late under load. If a cold start ever shows up
+# in front of someone who matters, move this to UptimeRobot or cron-job.org — both free, both
+# more punctual than cron on a shared runner.
+
+name: Keep Render awake
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping the API
+        env:
+          # Repository variable, not a secret — it is a public URL. Set it under
+          # Settings -> Secrets and variables -> Actions -> Variables.
+          API_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          if [ -z "$API_URL" ]; then
+            echo "API_BASE_URL repository variable is not set — nothing to ping."
+            exit 1
+          fi
+
+          # --max-time is generous on purpose: a service that has already fallen asleep needs
+          # 30–60s to answer, and that request is exactly the one worth waiting for.
+          code=$(curl -sS -o /tmp/body -w '%{http_code}' --max-time 90 "$API_URL/health/ready")
+
+          echo "HTTP $code"
+          cat /tmp/body; echo
+
+          # 200 means the app answered AND reached the database. A 503 means the app is up but
+          # Neon is unreachable, which is worth failing on — a silent 503 for days is how a
+          # broken connection string survives until someone tries to sign in.
+          [ "$code" = "200" ]
