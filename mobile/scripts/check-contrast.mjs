@@ -70,6 +70,27 @@ const pairs = [
   ['onPrimary', 'brand', UI, 'White outline: brandOutline border, code-box border'],
   ['onBrandMuted', 'brand', UI, 'Resting border of an empty code box'],
 
+  // The brand gradient (`colors.gradientBrand`). The band is drawn as stacked stops, so a
+  // caption can land on any of them — each is checked, not just the average. red500 is the
+  // lightest and therefore the binding one.
+  ['onPrimary', 'red500', TEXT, 'White copy on the lightest gradient stop'],
+  ['onPrimary', 'red900', TEXT, 'White copy on the darkest gradient stop'],
+  ['onBrandMuted', 'red500', TEXT, 'Muted copy on the lightest gradient stop'],
+  ['onBrandMuted', 'red900', TEXT, 'Muted copy on the darkest gradient stop'],
+  ['onPrimary', 'red500', UI, 'White outline on the lightest gradient stop'],
+  ['onBrandMuted', 'red500', UI, 'Muted outline on the lightest gradient stop'],
+
+  // The blush surfaces — the tinted sections of the white-and-red scheme.
+  ['text', 'blush', TEXT, 'Body copy on a blush section'],
+  ['textMuted', 'blush', TEXT, 'Captions on a blush section'],
+  ['primary', 'blush', TEXT, 'A red label on a blush section'],
+  ['primaryOnTint', 'blush', TEXT, 'Chip text on a blush section'],
+  ['text', 'blushStrong', TEXT, 'Body copy on a selected blush surface'],
+  ['textMuted', 'blushStrong', TEXT, 'Captions on a selected blush surface'],
+  ['primaryOnTint', 'blushStrong', TEXT, 'Chip text on a selected blush surface'],
+  ['border', 'blush', UI, 'Input outline on a blush section'],
+  ['focusRing', 'blush', UI, 'Focus ring on a blush section'],
+
   // Body copy
   ['text', 'card', TEXT, 'Body text on a card'],
   ['text', 'background', TEXT, 'Body text on the screen background'],
@@ -99,6 +120,8 @@ const pairs = [
   ['error', 'background', UI, 'Invalid input outline on the screen background'],
 
   // Decorative — no minimum, listed so the set stays exhaustive.
+  ['blushLine', 'blush', DECORATIVE, 'Hairline on a blush section (decorative)'],
+  ['blush', 'card', DECORATIVE, 'Blush section against a white card (decorative)'],
   ['borderMuted', 'card', DECORATIVE, 'Hairline divider (decorative)'],
   ['background', 'card', DECORATIVE, 'Card lifted off the screen background (decorative)'],
 ];
@@ -122,6 +145,9 @@ const hcPairs = [
   [highContrast.primary, colors.card, AAA, 'HC: AppButton secondary — label on a card'],
   [highContrast.primary, colors.background, AAA, 'HC: AppButton link — label on the screen background'],
   [colors.onPrimary, highContrast.primary, UI, 'HC: checked checkbox fill against its tick'],
+
+  [colors.onPrimary, highContrast.gradient, AAA, 'HC: white copy on the flattened gradient band'],
+  [colors.white, highContrast.gradient, UI, 'HC: white outline on the flattened gradient band'],
 
   [highContrast.border, colors.card, UI, 'HC: input and button outline on a card'],
   [highContrast.border, colors.background, UI, 'HC: input and button outline on the screen background'],

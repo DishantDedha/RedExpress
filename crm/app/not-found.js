@@ -11,7 +11,7 @@ export default function NotFound() {
       </p>
       <Link
         href="/dashboard"
-        className="mt-4 inline-flex min-h-11 items-center rounded-md bg-brand px-4 font-semibold text-white hover:bg-brand-pressed"
+        className="mt-4 inline-flex min-h-11 items-center rounded-lg bg-brand px-4 font-semibold text-white hover:bg-brand-pressed"
       >
         Go to the dashboard
       </Link>

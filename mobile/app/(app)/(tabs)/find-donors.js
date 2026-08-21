@@ -12,13 +12,13 @@ import {
   Screen,
   ScreenHeader,
   useAnnounce,
-} from '../../components';
-import { BLOOD_GROUP_OPTIONS, bloodGroupLabel } from '../../data/bloodGroups';
-import { STATES, citiesOf, districtsOf } from '../../data/locations';
-import { useFocusMover } from '../../hooks/useAccessibilityFocus';
-import { searchDonors } from '../../services/donors';
-import { hapticError, hapticSuccess } from '../../services/feedback';
-import { colors, spacing } from '../../theme';
+} from '../../../components';
+import { BLOOD_GROUP_OPTIONS, bloodGroupLabel } from '../../../data/bloodGroups';
+import { STATES, citiesOf, districtsOf } from '../../../data/locations';
+import { useFocusMover } from '../../../hooks/useAccessibilityFocus';
+import { searchDonors } from '../../../services/donors';
+import { hapticError, hapticSuccess } from '../../../services/feedback';
+import { colors, spacing } from '../../../theme';
 
 /**
  * Find Blood Donors (mockup 2).
@@ -148,6 +148,15 @@ export default function FindDonorsScreen() {
 
   return (
     <Screen
+      hero={
+        <ScreenHeader
+          title="Find blood donors"
+          subtitle="Search verified donors near you for an emergency blood requirement."
+          tone="brand"
+          voicePurpose="Choose a blood group and an area, then search. Results are nearest first, each with a call button."
+          voiceAction="Search"
+        />
+      }
       footer={
         <AppButton
           title="Search"
@@ -159,13 +168,6 @@ export default function FindDonorsScreen() {
         />
       }
     >
-      <ScreenHeader
-        title="Find blood donors"
-        subtitle="Search verified donors near you for an emergency blood requirement."
-        voicePurpose="Choose a blood group and an area, then search. Results are nearest first, each with a call button."
-        voiceAction="Search"
-      />
-
       <Card title="Who you need">
         <AppSelect
           label="Blood group"

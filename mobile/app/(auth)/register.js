@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
+  ActionTile,
   AppButton,
   AppText,
-  Card,
   InitiativeFooter,
   Screen,
   ScreenHeader,
@@ -13,12 +13,17 @@ import { getAccessToken } from '../../services/tokenStorage';
 import { colors, spacing } from '../../theme';
 
 /**
- * "Join Red Express" — mockup 2. The fork between the two audiences.
+ * "Join Red Express" — the fork between the two audiences.
  *
- * Each choice is a pressable `Card`, so it is a real button with a role and a label rather
- * than a tappable box. The `accessibilityLabel` folds the title and its description into one
- * phrase: a screen-reader user hears the whole choice at a single stop instead of swiping
- * between a heading and an explanation and reassembling them.
+ * Each choice is an `ActionTile`, so it is a real button with a role and a label rather than
+ * a tappable box, and the tile's `accessibilityHint` carries the description — a
+ * screen-reader user hears the whole choice at a single stop instead of swiping between a
+ * heading and an explanation and reassembling them.
+ *
+ * The two are deliberately not drawn at equal weight. Becoming a donor is the ask; finding
+ * blood is the need that brought most people here. Giving the donor tile the filled red and
+ * the receiver tile the blush fill says which is which without either becoming hard to find,
+ * and the labels say it outright for anyone who cannot see the difference.
  *
  * ## Reached from two directions
  *
@@ -27,7 +32,7 @@ import { colors, spacing } from '../../theme';
  * It is also where a *newly created* account arrives when someone tapped "Login" with a
  * number Red Express had never seen (see `routeAfterVerify` in services/auth.js). They are
  * already verified, so sending them back for another code would be absurd — when a session
- * exists, the cards go straight to the matching registration form.
+ * exists, the tiles go straight to the matching registration form.
  */
 export default function RegisterScreen() {
   const router = useRouter();
@@ -55,59 +60,61 @@ export default function RegisterScreen() {
   }
 
   return (
-    <Screen tone="brand" footer={<InitiativeFooter />}>
-      <ScreenHeader
-        title="Join Red Express"
-        subtitle="Choose your registration type to get started."
-        tone="brand"
-        voicePurpose="Two choices. Become a donor to give blood, or find blood if you need it."
-        voiceAction="Become a donor"
+    <Screen
+      hero={
+        <ScreenHeader
+          title="Join Red Express"
+          subtitle="Choose your registration type to get started."
+          tone="brand"
+          voicePurpose="Two choices. Become a donor to give blood, or find blood if you need it."
+          voiceAction="Become a donor"
+        />
+      }
+      footer={<InitiativeFooter />}
+    >
+      <ActionTile
+        title="Become a Donor"
+        description="Register your blood group today and help save lives during emergencies."
+        icon="drop"
+        tone="primary"
+        onPress={() => choose('DONOR')}
+        accessibilityLabel="Become a donor"
+        accessibilityHint={
+          signedIn
+            ? 'Register your blood group. Opens the donor registration form.'
+            : 'Register your blood group. Starts donor registration, beginning with your mobile number.'
+        }
+        style={styles.tile}
       />
 
-      <Card
-        title="Become a Donor"
-        onPress={() => choose('DONOR')}
-        accessibilityLabel="Become a donor. Register your blood group today and help save lives during emergencies."
-        accessibilityHint={
-          signedIn
-            ? 'Opens the donor registration form'
-            : 'Starts donor registration, beginning with your mobile number'
-        }
-      >
-        <AppText variant="body" color={colors.textMuted}>
-          Register your blood group today and help save lives during emergencies.
-        </AppText>
-      </Card>
-
-      <Card
+      <ActionTile
         title="Find Blood"
+        description="Search nearby donors by blood group for fast emergency blood support."
+        icon="search"
+        tone="tint"
         onPress={() => choose('RECEIVER')}
-        accessibilityLabel="Find blood. Search nearby donors by blood group for fast emergency blood support."
+        accessibilityLabel="Find blood"
         accessibilityHint={
           signedIn
-            ? 'Opens the short registration form for finding blood'
-            : 'Starts a short registration so you can post a blood request'
+            ? 'Search nearby donors. Opens the short registration form for finding blood.'
+            : 'Search nearby donors. Starts a short registration so you can post a blood request.'
         }
-      >
-        <AppText variant="body" color={colors.textMuted}>
-          Search nearby donors by blood group for fast emergency blood support.
-        </AppText>
-      </Card>
+        style={styles.tile}
+      />
 
       {!signedIn ? (
         <View style={styles.existing}>
-          <AppText variant="body" color={colors.onBrandMuted}>
+          <AppText variant="body" color={colors.textMuted}>
             Already have an account?
           </AppText>
           <AppButton
             title="Login Here"
-            variant="brandOutline"
+            variant="link"
             size="small"
             fullWidth={false}
             onPress={() => router.push({ pathname: '/phone', params: { mode: 'login' } })}
             accessibilityLabel="Login here"
             accessibilityHint="Sign in with your registered mobile number"
-            style={styles.loginButton}
           />
         </View>
       ) : null}
@@ -116,6 +123,7 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
+  tile: { marginBottom: spacing.md },
   existing: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -124,5 +132,4 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.lg,
   },
-  loginButton: { paddingHorizontal: spacing.lg },
 });

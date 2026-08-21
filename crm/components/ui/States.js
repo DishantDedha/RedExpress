@@ -16,7 +16,7 @@ export function LoadingState({ label = 'Loading…', rows = 3 }) {
         <div
           key={index}
           aria-hidden="true"
-          className="h-16 animate-pulse rounded-lg border border-line bg-card"
+          className="h-16 animate-pulse rounded-panel border border-line bg-card"
         />
       ))}
     </div>
@@ -29,7 +29,7 @@ export function LoadingState({ label = 'Loading…', rows = 3 }) {
  */
 export function ErrorState({ title = 'Something went wrong', message, code, onRetry, retryLabel = 'Try again' }) {
   return (
-    <div role="alert" className="rounded-lg border border-danger bg-danger-tint p-4">
+    <div role="alert" className="rounded-panel border border-danger bg-danger-tint p-4 shadow-card">
       <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
         <span aria-hidden="true" className="text-danger">
           ⚠
@@ -49,7 +49,7 @@ export function ErrorState({ title = 'Something went wrong', message, code, onRe
         <button
           type="button"
           onClick={onRetry}
-          className="mt-3 inline-flex min-h-11 items-center rounded-md border border-line-strong bg-card px-4 text-sm font-semibold text-ink hover:bg-surface"
+          className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-4 text-sm font-semibold text-ink transition-colors hover:bg-surface"
         >
           {retryLabel}
         </button>
@@ -61,7 +61,7 @@ export function ErrorState({ title = 'Something went wrong', message, code, onRe
 /** "No results" — a real message, never an empty table with no explanation. */
 export function EmptyState({ title = 'Nothing to show', message, children }) {
   return (
-    <div className="rounded-lg border border-dashed border-line-strong bg-card p-8 text-center">
+    <div className="rounded-panel border border-dashed border-line-strong bg-blush p-8 text-center">
       <p className="text-base font-semibold text-ink">{title}</p>
       {message ? <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">{message}</p> : null}
       {children ? <div className="mt-4 flex justify-center">{children}</div> : null}

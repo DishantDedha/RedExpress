@@ -69,7 +69,7 @@ export default function Pagination({ basePath, params, page, pageSize, total, ha
  * out of the tab order, and cannot be followed.
  */
 function PageLink({ href, disabled, children }) {
-  const shared = 'inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 font-semibold';
+  const shared = 'inline-flex min-h-11 items-center gap-1.5 rounded-lg border px-3 font-semibold';
 
   if (disabled) {
     return (

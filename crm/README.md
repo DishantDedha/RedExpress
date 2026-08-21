@@ -146,9 +146,23 @@ Staff rely on assistive tech too, and a dashboard is where accessibility is most
 on the assumption that "internal tools don't need it".
 
 - The palette is copied from `mobile/theme/index.js`, contrast measurements and all — every
-  text pair clears WCAG AA 4.5:1, every control outline and the focus ring clear 3:1.
+  text pair clears WCAG AA 4.5:1, every control outline and the focus ring clear 3:1. The two
+  tokens that exist only here — the navigation rail and the header band — are measured by hand
+  and the ratios recorded in `globals.css`.
+- **The rail is the only saturated surface.** White on it is 12.84:1 and its muted copy is
+  11.08:1 — AAA, because navigation is read constantly and at a glance. Everything else in the
+  dashboard is dark text on white. The active nav item inverts to a white pill rather than a
+  tint, so the current section reads as a shape and not only as a colour, and `aria-current`
+  states it outright regardless.
 - One focus ring, defined once in `globals.css`, and never removed. `:focus-visible`, so a Tab
-  always draws it and a mouse click does not.
+  always draws it and a mouse click does not. On the rail it flips to white — the app's red
+  ring on the red rail is 1.4:1, which is not an indicator.
+- **Icons are `<svg aria-hidden>`, not characters.** The nav used to use `▤`, `☰` and `✚`,
+  which screen readers try to pronounce and which fall back to a tofu box when the system font
+  lacks the glyph. Every icon sits beside its own visible label, so hiding them all is the
+  correct default rather than a shortcut.
+- The header band is a gradient, and **both** its stops carry white above 4.5:1 on their own.
+  Checking the midpoint of a ramp says nothing about the end where the ratio is worst.
 - A skip link is the first tab stop on every dashboard page; `<main>` carries `tabIndex={-1}`
   so it can receive that focus.
 - Toasts use two live regions — polite for success, assertive for errors — both present from
@@ -194,7 +208,7 @@ app/
     page.js               Server component; reads ?reason= and ?next=
     LoginForm.js          Client form → /api/auth/login
   dashboard/
-    layout.js             Session check, sidebar/topbar shell, skip link
+    layout.js             Session check, rail + content-column shell, skip link
     page.js               Dashboard home: stats, donors by group, recent open requests
     loading.js            Announced skeleton
     error.js              Segment error boundary with a retry
@@ -209,8 +223,9 @@ app/
     login/route.js        Token exchange → httpOnly cookies
     logout/route.js       Clears cookies (programmatic path)
 components/
-  Sidebar.js              Nav list — every entry lives in the one array here
+  Sidebar.js              The red rail: brand + nav list — every entry lives in the one array here
   Topbar.js               Identity + sign-out (server action, works without JS)
+  ui/Icon.js              Inline-SVG icon set and the brand mark, all decorative
   SessionProvider.js      useSession() for client components
   ToastProvider.js        useToast(): success / error / info
   CallHistory.js          Call log list + the "last call" table cell

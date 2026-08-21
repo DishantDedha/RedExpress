@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Redirect, Stack } from 'expo-router';
-import { LiveMessage, Screen, ScreenHeader } from '../../components';
+import { brandHeaderOptions, LiveMessage, Screen, ScreenHeader } from '../../components';
 import { useNotificationRouting } from '../../hooks/useNotificationRouting';
 import { getAccessToken } from '../../services/tokenStorage';
 import { colors, typography } from '../../theme';
@@ -73,7 +73,17 @@ export default function AppLayout() {
           headerBackTitleStyle: typography.body,
           contentStyle: { backgroundColor: colors.background },
         }}
-      />
+      >
+        {/* The tab bar is the root of the signed-in area, so there is nothing to go back to
+            and no header to draw. Everything below is pushed *over* the tabs and keeps its
+            back button. */}
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+
+        {/* Screens that open onto a red band need the transparent white-on-red header, or
+            the back arrow is a red glyph on red. */}
+        <Stack.Screen name="post-request" options={brandHeaderOptions} />
+        <Stack.Screen name="requests/[id]" options={brandHeaderOptions} />
+      </Stack>
     </>
   );
 }

@@ -69,7 +69,10 @@ export async function requestOtp(phone) {
     prisma.otpCode.create({ data: { phone, codeHash, expiresAt } }),
   ]);
 
-  await sendSms(phone, otpMessage(code)).catch((err) => {
+  // The code travels alongside the rendered text: MSG91's OTP channel takes it as a
+  // parameter rather than parsing it back out of a message, and the console provider ignores
+  // it. Verification is unaffected either way — only the bcrypt hash above is ever compared.
+  await sendSms(phone, otpMessage(code), { otp: code }).catch((err) => {
     console.error('[otp] SMS delivery failed:', err.message);
     throw new ApiError(502, 'SMS_SEND_FAILED', 'We could not send the code right now. Please try again.');
   });

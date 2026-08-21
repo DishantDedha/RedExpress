@@ -91,7 +91,7 @@ export default function ConfirmDialog({
         {children}
 
         {error ? (
-          <p role="alert" className="rounded-md border border-danger bg-danger-tint p-3 text-sm font-medium text-ink">
+          <p role="alert" className="rounded-lg border border-danger bg-danger-tint p-3 text-sm font-medium text-ink">
             <span aria-hidden="true" className="mr-1.5 text-danger">
               ⚠
             </span>
@@ -141,7 +141,7 @@ export function NoteField({ value, onChange, label = 'Note (optional)', hint, di
         onChange={(event) => onChange(event.target.value)}
         aria-describedby={hint ? hintId : undefined}
         maxLength={1000}
-        className="rounded-md border border-line-strong bg-card px-3 py-2 text-base text-ink"
+        className="rounded-lg border border-line-strong bg-card px-3 py-2 text-base text-ink"
       />
     </div>
   );

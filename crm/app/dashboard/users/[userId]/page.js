@@ -47,7 +47,7 @@ export default async function UserDetailPage({ params }) {
             <PhoneLink phone={user.phone} name={user.name || 'this person'} />
             <Link
               href="/dashboard/users"
-              className="inline-flex min-h-11 items-center rounded-md border border-line-strong bg-card px-4 text-sm font-semibold text-ink hover:bg-surface"
+              className="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-4 text-sm font-semibold text-ink hover:bg-surface"
             >
               Back to people
             </Link>
@@ -163,7 +163,7 @@ export default async function UserDetailPage({ params }) {
             ) : (
               <ol className="space-y-3">
                 {audit.map((entry) => (
-                  <li key={entry.id} className="rounded-md border border-line bg-surface p-3 text-sm">
+                  <li key={entry.id} className="rounded-lg border border-line bg-surface p-3 text-sm">
                     <p className="font-semibold text-ink">
                       {AUDIT_ACTION_LABELS[entry.action] ?? entry.action}
                     </p>

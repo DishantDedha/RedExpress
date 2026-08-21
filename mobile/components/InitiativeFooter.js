@@ -13,18 +13,32 @@ import { colors, spacing } from '../theme';
  * The spoken form is spelled "We4You" rather than the visible capitals: "WE4YOU" is short
  * enough that both TalkBack and VoiceOver are liable to read it out as individual letters
  * and a digit.
+ *
+ * ## Tone
+ *
+ * The credit used to appear only on full-bleed red screens, so its colours were hard-coded
+ * for red. The redesign moved most of those screens onto a white sheet, where white text is
+ * invisible — hence the prop. It is not a styling convenience: getting it wrong makes the
+ * line unreadable rather than merely off-palette, which is why the two colours move together
+ * as a set rather than being passed in individually.
  */
-export function InitiativeFooter({ style }) {
+export function InitiativeFooter({ tone = 'default', style }) {
+  const brand = tone === 'brand';
+
   return (
     <View
       accessible
       accessibilityLabel="An initiative by We4You"
       style={[styles.container, style]}
     >
-      <AppText variant="caption" color={colors.onBrandMuted}>
+      <AppText variant="caption" color={brand ? colors.onBrandMuted : colors.textMuted}>
         An initiative by{' '}
       </AppText>
-      <AppText variant="bodyStrong" color={colors.onPrimary} style={styles.mark}>
+      <AppText
+        variant="bodyStrong"
+        color={brand ? colors.onPrimary : colors.primary}
+        style={styles.mark}
+      >
         WE4YOU
       </AppText>
     </View>

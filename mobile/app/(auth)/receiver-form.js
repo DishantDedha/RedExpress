@@ -166,12 +166,19 @@ export default function ReceiverFormScreen() {
 
   return (
     <Screen
-      tone="brand"
+      hero={
+        <ScreenHeader
+          title="Find Blood"
+          subtitle="A few details so we can reach donors near you."
+          tone="brand"
+          voicePurpose="Four details so we can reach donors near you: your name, your state, your district and your mobile number."
+          voiceAction="Continue"
+        />
+      }
       footer={
         <View>
           <AppButton
             title="Continue"
-            variant="brand"
             size="large"
             loading={submitting}
             loadingLabel="Setting up your account"
@@ -182,15 +189,7 @@ export default function ReceiverFormScreen() {
         </View>
       }
     >
-      <ScreenHeader
-        title="Find Blood"
-        subtitle="A few details so we can reach donors near you."
-        tone="brand"
-        voicePurpose="Four details so we can reach donors near you: your name, your state, your district and your mobile number."
-        voiceAction="Continue"
-      />
-
-      <LiveMessage message={status?.message} tone={status?.tone ?? 'info'} onBrand />
+      <LiveMessage message={status?.message} tone={status?.tone ?? 'info'} />
 
       <Card title="Your details">
         <AppTextInput

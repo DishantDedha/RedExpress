@@ -66,7 +66,7 @@ export default function LifecycleLegend() {
           </li>
         </ol>
 
-        <p className="rounded-md border border-info bg-info-tint p-3">
+        <p className="rounded-lg border border-info bg-info-tint p-3">
           <span aria-hidden="true">ℹ </span>
           Administrators can also reactivate a donor by hand, for when someone was marked unreachable
           in error. That restores them to search immediately but does not restore their session — they

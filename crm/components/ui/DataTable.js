@@ -22,7 +22,7 @@ export default function DataTable({ caption, captionVisible = false, columns, ro
       role="region"
       aria-label={caption}
       tabIndex={0}
-      className="overflow-x-auto rounded-lg border border-line bg-card"
+      className="overflow-x-auto rounded-panel border border-line bg-card shadow-card"
     >
       <table className="w-full border-collapse text-left text-sm">
         <caption
@@ -36,7 +36,7 @@ export default function DataTable({ caption, captionVisible = false, columns, ro
         </caption>
 
         <thead>
-          <tr className="border-b border-line-strong bg-surface">
+          <tr className="border-b border-line-strong bg-blush">
             {columns.map((column) => (
               <th
                 key={column.key}
@@ -61,7 +61,10 @@ export default function DataTable({ caption, captionVisible = false, columns, ro
           {rows.map((row, index) => (
             <tr
               key={getRowKey ? getRowKey(row, index) : (row.id ?? index)}
-              className={['border-b border-line last:border-b-0', rowClassName?.(row) ?? ''].join(' ')}
+              className={[
+                'border-b border-line transition-colors last:border-b-0 hover:bg-blush',
+                rowClassName?.(row) ?? '',
+              ].join(' ')}
             >
               {columns.map((column, columnIndex) => {
                 // The first cell is the row's name — marking it a row header means a screen

@@ -56,8 +56,11 @@ mobile/
     index.js                  Landing (mockup 1)
     demo.js                   the component kit, on one screen
     (auth)/                   login · register · phone · otp · donor-form · receiver-form
-    (app)/                    home · profile · find-donors · post-request · notifications ·
-                              settings (accessibility preferences)
+    (app)/                    the signed-in stack, behind the token guard
+      (tabs)/                 home · find-donors · notifications · profile — the bottom bar
+      post-request.js         pushed over the tabs, with a back button
+      settings.js             accessibility preferences
+      privacy.js              what we know about you, and who can see it
       requests/[id].js        request detail and respond — what a notification opens
   components/                 the accessible component kit
   data/                       blood groups, and Odisha state/district/city
@@ -120,17 +123,32 @@ the session and routing to sign-in with a spoken explanation.
 One file: [`theme/index.js`](theme/index.js). Screens never hard-code a colour or a size.
 
 The palette is **verified, not eyeballed**. `npm run verify:contrast` reads the real tokens out
-of the theme and checks all 48 foreground/background pairs the UI renders against WCAG 2.1 —
+of the theme and checks all 67 foreground/background pairs the UI renders against WCAG 2.1 —
 4.5:1 for text, 3:1 for input outlines and focus rings, and **7:1 (AAA) for every pair the
 high-contrast preference substitutes in** — and exits non-zero on a failure. It caught one
 during Phase 7: the input border passed at 3.15:1 on a white card but fell to 2.95:1 on the
 grey screen background, where forms outside a card actually sit.
 
-**Two surfaces, two foreground sets.** The app surface is grey with dark text; the pre-sign-in
-screens are full-bleed red (`Screen tone="brand"`), where the entire light-surface set — `text`,
-`textMuted`, `border`, `focusRing` — is unreadable. On red, use `colors.onPrimary` for anything
-that matters and `colors.onBrandMuted` (5.35:1) for supporting copy. The tone is a prop rather
-than a per-screen style block precisely so a screen cannot end up red with dark body text on it.
+**Two surfaces, two foreground sets.** The app surface is light with dark text. The other is
+red, and the entire light-surface set — `text`, `textMuted`, `border`, `focusRing` — is
+unreadable on it. There, use `colors.onPrimary` for anything that matters and
+`colors.onBrandMuted` (6.32:1 on `brand`, 5.44:1 on the lightest gradient stop) for supporting
+copy. The surface is chosen by a prop rather than a per-screen style block precisely so a
+screen cannot end up red with dark body text on it.
+
+**Where the red actually is.** Every screen used to be red edge to edge before sign-in. Now the
+red is a *band*: `<Screen hero={…}>` paints a gradient across the top carrying the screen's
+title, and everything below it sits on a white sheet with rounded top corners. Everything a
+user has to read, fill in or scan is on white; the brand owns the band.
+
+That is a legibility decision as much as a visual one. A text input on a saturated background
+has to invert its outline, its label, its helper text and its error state, and every one of
+those is a pair somebody has to measure — which is why the old "Send OTP" button had to be
+inverted to white (see below). On white, a field is the same field as everywhere else.
+
+The gradient is drawn by `<Gradient/>` as stacked bands rather than by a native dependency, and
+its *stops* are what the contrast script checks — not an average, which would say nothing about
+the light end where the ratio is worst.
 
 ### The component kit
 
@@ -156,8 +174,14 @@ screen in Phases 8–11 inherits it rather than being audited and patched one at
 | `DonorCard` | A search result as **two** stops — one spoken summary, one Call button — not six fragments per donor |
 | `PushConsent` | The notification rationale *before* the one-shot OS prompt; renders nothing once alerts are on |
 | `DictationButton` | Speak a field instead of typing it. Renders **nothing at all** unless the optional native module is installed and the user has switched dictation on |
-| `Screen` | Safe areas, keyboard avoidance, and scrolling — so a form still works at 200% text size |
+| `Screen` | Safe areas, keyboard avoidance, and scrolling — so a form still works at 200% text size. Also the red hero band and the white sheet under it |
 | `LiveMessage` | Announces async events ("3 donors found") **and** renders them |
+| `Gradient` | The brand ramp, stacked from plain `View`s. Hides itself from the accessibility tree, and flattens to one dark fill under high contrast |
+| `Icon` | Twelve glyphs drawn from `View`s — no font, so **nothing a screen reader can try to pronounce**. Decorative unconditionally; there is no prop to change that |
+| `Chip` | A labelled pill. Every tone carries a word, never a colour alone |
+| `ActionTile` | A large labelled button with an icon and a description — one focus stop, the description as its hint. What replaced the column of identical buttons on Home |
+| `Avatar` | Initials in a circle. Decorative and hidden; the **one** place in the app that turns font scaling off, and only because it scales the whole circle by hand instead |
+| `SectionHeading` | A real `header` role above each group, so a long screen is navigable by rotor rather than only by swiping |
 
 Two decisions worth knowing before you extend this:
 

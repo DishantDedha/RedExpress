@@ -33,6 +33,8 @@ export default async function DashboardPage() {
   return (
     <>
       <PageHeader
+        banner
+        eyebrow="Today"
         title={`Welcome, ${user.name || user.email}`}
         description="Donor availability at a glance, and the blood requests that are still open."
       />
@@ -46,6 +48,7 @@ export default async function DashboardPage() {
           <StatTile
             label="Open requests"
             value={requests.open}
+            icon="clock"
             tone={requests.open > 0 ? 'brand' : 'default'}
             hint={
               requests.openCritical > 0
@@ -56,18 +59,21 @@ export default async function DashboardPage() {
           <StatTile
             label="Active donors"
             value={donors.byStatus.ACTIVE}
+            icon="people"
             tone="success"
             hint={`${donors.total} donor profiles in total`}
           />
           <StatTile
             label="Donors marked dead"
             value={donors.byStatus.DEAD}
+            icon="alert"
             tone={donors.byStatus.DEAD > 0 ? 'warning' : 'default'}
             hint="Unreachable by phone. Hidden from search until they sign in again."
           />
           <StatTile
             label="Donors notified today"
             value={today.matches}
+            icon="drop"
             hint={`${pluralize(today.accepted, 'acceptance')} so far`}
           />
         </StatGrid>
@@ -113,7 +119,7 @@ export default async function DashboardPage() {
             {requests.staleOpen > 0 ? (
               // Not decoration: rows still marked OPEN whose expiry has passed mean nobody is
               // closing requests out, and the open count above quietly disagrees with the list.
-              <p className="mt-3 rounded-md border border-warning bg-warning-tint p-2 text-sm text-ink">
+              <p className="mt-3 rounded-lg border border-warning bg-warning-tint p-2 text-sm text-ink">
                 <span aria-hidden="true">▲ </span>
                 {pluralize(requests.staleOpen, 'request')} still marked open but past the expiry time.
                 They no longer notify donors.
@@ -130,7 +136,7 @@ export default async function DashboardPage() {
           </h2>
           <Link
             href="/dashboard/requests"
-            className="inline-flex min-h-11 items-center rounded-md border border-line-strong bg-card px-4 text-sm font-semibold text-ink hover:bg-surface"
+            className="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-4 text-sm font-semibold text-ink transition-colors hover:bg-surface"
           >
             See all requests
           </Link>

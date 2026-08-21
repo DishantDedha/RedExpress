@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
+  ActionTile,
   AppButton,
   AppDateInput,
   AppSelect,
@@ -14,18 +15,20 @@ import {
   PhotoPicker,
   Screen,
   ScreenHeader,
+  SectionHeading,
   useAnnounce,
-} from '../../components';
-import { BLOOD_GROUP_OPTIONS, GENDER_OPTIONS, bloodGroupLabel, genderLabel } from '../../data/bloodGroups';
-import { OTHER_CITY, STATES, citiesOf, districtsOf } from '../../data/locations';
+} from '../../../components';
+import { BLOOD_GROUP_OPTIONS, GENDER_OPTIONS, bloodGroupLabel, genderLabel } from '../../../data/bloodGroups';
+import { OTHER_CITY, STATES, citiesOf, districtsOf } from '../../../data/locations';
 import {
   getDonorProfile,
   setAvailability,
   setLastDonationDate,
   updateDonorProfile,
-} from '../../services/profile';
-import { hapticError, hapticSuccess } from '../../services/feedback';
-import { formatPhoneForDisplay } from '../../utils/phone';
+} from '../../../services/profile';
+import { hapticError, hapticSuccess } from '../../../services/feedback';
+import { signOut } from '../../../services/session';
+import { formatPhoneForDisplay } from '../../../utils/phone';
 import {
   checkDateOfBirth,
   checkDonationDate,
@@ -35,8 +38,8 @@ import {
   reportErrors,
   required,
   validate,
-} from '../../utils/form';
-import { colors, spacing, radius } from '../../theme';
+} from '../../../utils/form';
+import { colors, spacing, radius } from '../../../theme';
 
 /**
  * The donor's own profile: read it, edit it, say whether you can donate right now, and record
@@ -337,6 +340,8 @@ export default function ProfileScreen() {
           onPress={() => router.push('/donor-form')}
           accessibilityHint="Opens the donor registration form"
         />
+
+        <AccountSection router={router} />
       </Screen>
     );
   }
@@ -345,6 +350,21 @@ export default function ProfileScreen() {
 
   return (
     <Screen
+      hero={
+        <ScreenHeader
+          title="Your profile"
+          subtitle={
+            editing ? 'Change what you need to and save.' : 'Your donor details and availability.'
+          }
+          tone="brand"
+          voicePurpose={
+            editing
+              ? 'Change your donor details, then save.'
+              : 'Your donor details. You can switch your availability on or off, and record your last donation.'
+          }
+          voiceAction={editing ? 'Save changes' : 'Available to donate'}
+        />
+      }
       footer={
         editing ? (
           <View style={styles.footerRow}>
@@ -370,17 +390,6 @@ export default function ProfileScreen() {
         ) : null
       }
     >
-      <ScreenHeader
-        title="Your profile"
-        subtitle={editing ? 'Change what you need to and save.' : 'Your donor details and availability.'}
-        voicePurpose={
-          editing
-            ? 'Change your donor details, then save.'
-            : 'Your donor details. You can switch your availability on or off, and record your last donation.'
-        }
-        voiceAction={editing ? 'Save changes' : 'Available to donate'}
-      />
-
       <LiveMessage message={status?.message} tone={status?.tone ?? 'info'} />
 
       {/* --- Availability -------------------------------------------------- */}
@@ -512,7 +521,67 @@ export default function ProfileScreen() {
           />
         </Card>
       )}
+
+      <AccountSection router={router} />
     </Screen>
+  );
+}
+
+/**
+ * Settings, privacy, and the way out.
+ *
+ * These four used to sit at the bottom of the home screen as full-width buttons identical to
+ * "Find blood donors". They belong here — but *here* has to include the error branch above,
+ * not only the loaded one: this screen loads a **donor** profile, so a receiver signed in to
+ * post blood requests never reaches the bottom of the form. Rendering it in one place only
+ * would have left them with no way to sign out.
+ *
+ * "Accessibility settings" is a plain labelled tile in the main column rather than a gear in
+ * a corner, for the reason it always was: someone who needs bigger text or a voice reading
+ * the screen has to find it *without* being able to read the screen it is on.
+ */
+function AccountSection({ router }) {
+  return (
+    <>
+      <SectionHeading title="Account" style={styles.accountSection} />
+
+      <ActionTile
+        title="Accessibility settings"
+        description="Voice guidance, big text, high contrast and dictation."
+        icon="sliders"
+        onPress={() => router.push('/settings')}
+        style={styles.accountTile}
+      />
+
+      {/* A labelled tile in the main column, not fine print in a footer. The people most
+          affected by what this screen explains — donors handing over a phone number and a
+          home address — are the ones least able to find a grey 8pt link. */}
+      <ActionTile
+        title="Privacy and permissions"
+        description="What Red Express knows about you, and who can see it."
+        icon="shield"
+        onPress={() => router.push('/privacy')}
+        style={styles.accountTile}
+      />
+
+      <ActionTile
+        title="See the component kit"
+        description="A demonstration of the app's accessible components."
+        icon="list"
+        onPress={() => router.push('/demo')}
+        style={styles.accountTile}
+      />
+
+      <AppButton
+        title="Sign out"
+        variant="link"
+        // `signOut`, not `api.signOut`: this hands the push token back first, so the next
+        // blood request does not arrive on a phone whose owner has left.
+        onPress={() => signOut()}
+        accessibilityHint="Signs you out and returns to the sign in screen"
+        style={styles.signOut}
+      />
+    </>
   );
 }
 
@@ -754,6 +823,9 @@ function describeEligibility(lastDonationDate) {
 }
 
 const styles = StyleSheet.create({
+  accountSection: { marginTop: spacing.xl },
+  accountTile: { marginBottom: spacing.md },
+  signOut: { marginTop: spacing.md },
   retry: { marginTop: spacing.lg, marginBottom: spacing.sm },
   note: { marginTop: spacing.md },
   eligibility: { marginBottom: spacing.lg },

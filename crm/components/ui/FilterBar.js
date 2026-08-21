@@ -29,7 +29,7 @@ export default function FilterBar({ action, children, resultsLabel, clearHref, l
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            className="inline-flex min-h-11 items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-pressed"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-pressed"
           >
             Apply filters
           </button>
@@ -37,7 +37,7 @@ export default function FilterBar({ action, children, resultsLabel, clearHref, l
           {clearHref ? (
             <Link
               href={clearHref}
-              className="inline-flex min-h-11 items-center rounded-md border border-line-strong bg-card px-4 text-sm font-semibold text-ink hover:bg-surface"
+              className="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-4 text-sm font-semibold text-ink hover:bg-surface"
             >
               Clear all filters
             </Link>
@@ -68,7 +68,7 @@ export function SelectFilter({ label, name, options, defaultValue = '', anyLabel
         id={id}
         name={name}
         defaultValue={defaultValue}
-        className="min-h-11 rounded-md border border-line-strong bg-card px-3 text-base text-ink"
+        className="min-h-11 rounded-lg border border-line-strong bg-card px-3 text-base text-ink"
       >
         <option value="">{anyLabel ?? `Any ${label.toLowerCase()}`}</option>
         {options.map((option) => (
@@ -103,7 +103,7 @@ export function TextFilter({ label, name, defaultValue = '', placeholder, hint, 
         defaultValue={defaultValue}
         placeholder={placeholder}
         aria-describedby={hint ? hintId : undefined}
-        className="min-h-11 rounded-md border border-line-strong bg-card px-3 text-base text-ink placeholder:text-ink-muted"
+        className="min-h-11 rounded-lg border border-line-strong bg-card px-3 text-base text-ink placeholder:text-ink-muted"
       />
     </div>
   );

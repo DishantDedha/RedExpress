@@ -9,12 +9,32 @@
  * (4.5:1 for text, 3:1 for control outlines and focus rings). The ratio in each comment is
  * the measured figure. Change a hex here and you have changed it for a staff member with
  * low vision, so re-measure before you do.
+ *
+ * The app has no automated contrast gate of its own — the script that enforces this lives in
+ * the mobile workspace (`npm run verify:contrast --workspace mobile`) and reads the mobile
+ * theme. Any value here that also exists there must be changed in both, and the ones that
+ * only exist here (the rail, the header band) are measured by hand and recorded below.
  */
 @theme {
   --color-brand: #b00020; /* 7.33:1 on white — primary buttons, active nav, headings */
   --color-brand-pressed: #8c0019; /* 9.86:1 on white — hover/active fill */
-  --color-brand-ink: #8a0016; /* 8.51:1 on brand-tint — text on a tinted surface */
+  --color-brand-ink: #8a0016; /* 8.51:1 on brand-tint, 10.04:1 on white — text on a tint */
   --color-brand-tint: #fde7eb; /* decorative fill only */
+
+  /**
+   * The ends of the brand ramp.
+   *
+   * `brand-bright` is the only red here lighter than `brand`, and it exists so the header
+   * band reads as a gradient rather than a flat fill. It is the binding stop for anything
+   * drawn on the band: white is 6.30:1 on it, so a caption sitting anywhere along the ramp
+   * clears AA.
+   *
+   * `brand-deep` is the navigation rail. White on it is 12.84:1 and the muted rail copy is
+   * 11.08:1 — a rail is read constantly and at a glance, so it gets AAA rather than AA.
+   */
+  --color-brand-bright: #c2002e; /* 6.30:1 with white — lightest band stop */
+  --color-brand-deep: #6b0014; /* 12.84:1 with white — the rail */
+  --color-on-brand-muted: #ffe9ec; /* 11.08:1 on brand-deep, 6.32:1 on brand */
 
   --color-ink: #1b1b1f; /* 17.17:1 on white — body copy */
   --color-ink-muted: #5a5d66; /* 6.58:1 on white — captions. "Muted" still has to be readable */
@@ -26,6 +46,15 @@
   --color-surface: #f7f7f9; /* page background */
   --color-card: #ffffff; /* raised surface */
 
+  /**
+   * The blush surfaces — the "red" half of a white-and-red scheme doing work a saturated
+   * fill cannot. They tint a section without becoming a background anyone has to read dark
+   * text off at low contrast: ink is 16.06:1 on blush and body copy sits on it routinely.
+   */
+  --color-blush: #fff5f6; /* section tint */
+  --color-blush-strong: #fdecef; /* hover / selected state of a blush surface */
+  --color-blush-line: #f3d7dc; /* decorative hairline on blush, never around a control */
+
   /* Status colours. Every one of these is paired with a word in the UI — colour alone is
      not allowed to carry meaning (WCAG 1.4.1) and reaches nobody using a screen reader. */
   --color-success: #1b5e20; /* 7.87:1 on white */
@@ -36,6 +65,19 @@
   --color-warning-tint: #fdf3e0;
   --color-info: #0b5394; /* 7.84:1 on white */
   --color-info-tint: #e7f0fa;
+
+  /**
+   * Elevation.
+   *
+   * Every surface that takes one of these also draws a border. A shadow is decoration and
+   * disappears entirely for anyone running a forced-colours mode, at which point a card
+   * whose only boundary was a shadow has no boundary at all.
+   */
+  --shadow-card: 0 1px 2px rgb(27 27 31 / 0.04), 0 1px 3px rgb(27 27 31 / 0.06);
+  --shadow-raised: 0 4px 12px rgb(27 27 31 / 0.06), 0 1px 3px rgb(27 27 31 / 0.05);
+  --shadow-rail: 0 8px 24px rgb(77 0 14 / 0.28);
+
+  --radius-panel: 0.875rem; /* cards, tiles and tables */
 }
 
 @layer base {
@@ -59,6 +101,14 @@
     outline: 3px solid var(--color-brand);
     outline-offset: 2px;
     border-radius: 2px;
+  }
+
+  /**
+   * On the rail the ring above is a dark red outline on a dark red fill — 1.4:1, which is
+   * not a focus indicator. White is 12.84:1 there.
+   */
+  .on-rail :focus-visible {
+    outline-color: #ffffff;
   }
 
   /* Respect a staff member's reduced-motion setting rather than animating regardless. */
@@ -107,5 +157,40 @@
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+
+  /**
+   * The brand ramp, used by the navigation rail and the page header band.
+   *
+   * A gradient is decoration and this one is constrained accordingly: both stops carry white
+   * above 4.5:1 on their own (6.30:1 and 12.84:1), so text on the band is AA wherever it
+   * lands rather than only where the ramp happens to be dark.
+   */
+  .brand-band {
+    background-image: linear-gradient(
+      135deg,
+      var(--color-brand-bright) 0%,
+      var(--color-brand) 45%,
+      var(--color-brand-deep) 100%
+    );
+  }
+
+  .brand-rail {
+    background-image: linear-gradient(180deg, var(--color-brand-deep) 0%, #4d000e 100%);
+  }
+
+  /**
+   * Forced-colours mode replaces every colour above with the user's own palette and drops
+   * background images entirely — which would leave white text on whatever the band became.
+   * Handing the text back to the system keeps it legible instead.
+   */
+  @media (forced-colors: active) {
+    .brand-band,
+    .brand-rail {
+      background-image: none;
+      background-color: Canvas;
+      color: CanvasText;
+      border: 1px solid CanvasText;
+    }
   }
 }

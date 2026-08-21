@@ -9,7 +9,7 @@ export default function Card({ title, description, headingLevel = 2, actions, ch
   const Heading = `h${headingLevel}`;
 
   return (
-    <section className={`rounded-lg border border-line bg-card p-4 shadow-sm ${className}`}>
+    <section className={`rounded-panel border border-line bg-card p-5 shadow-card ${className}`}>
       {(title || actions) && (
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
           <div>

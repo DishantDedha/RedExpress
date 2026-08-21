@@ -208,8 +208,7 @@ export default function RequestDetailScreen() {
 
   if (loading) {
     return (
-      <Screen>
-        <ScreenHeader title="Blood request" subtitle="Loading the details." />
+      <Screen hero={<ScreenHeader title="Blood request" subtitle="Loading the details." tone="brand" />}>
         <LiveMessage message="Loading the request…" tone="progress" />
       </Screen>
     );
@@ -217,8 +216,7 @@ export default function RequestDetailScreen() {
 
   if (loadError) {
     return (
-      <Screen>
-        <ScreenHeader title="Blood request" />
+      <Screen hero={<ScreenHeader title="Blood request" tone="brand" />}>
         <LiveMessage message={loadError} tone="error" />
         <AppButton
           title="Try again"
@@ -236,21 +234,24 @@ export default function RequestDetailScreen() {
   const open = request.status === 'OPEN';
 
   return (
-    <Screen>
-      <ScreenHeader
-        title={`${bloodGroupLabel(request.bloodGroup)} needed`}
-        subtitle={request.hospitalName}
-        // The full details are announced separately on arrival (see `spokenSummary`), so this
-        // says only what the screen is *for* — otherwise a donor under voice guidance hears
-        // the request twice, once in summary and once in full.
-        voicePurpose={
-          data.canRespond
-            ? 'A patient near you needs blood. Answer whether you can donate.'
-            : 'The details of this blood request, and who is being alerted.'
-        }
-        voiceAction={data.canRespond ? 'Yes, I can donate' : null}
-      />
-
+    <Screen
+      hero={
+        <ScreenHeader
+          title={`${bloodGroupLabel(request.bloodGroup)} needed`}
+          subtitle={request.hospitalName}
+          tone="brand"
+          // The full details are announced separately on arrival (see `spokenSummary`), so
+          // this says only what the screen is *for* — otherwise a donor under voice guidance
+          // hears the request twice, once in summary and once in full.
+          voicePurpose={
+            data.canRespond
+              ? 'A patient near you needs blood. Answer whether you can donate.'
+              : 'The details of this blood request, and who is being alerted.'
+          }
+          voiceAction={data.canRespond ? 'Yes, I can donate' : null}
+        />
+      }
+    >
       <LiveMessage message={status?.message} tone={status?.tone ?? 'info'} />
 
       {/* The whole request as one focus stop, in the order it matters. */}

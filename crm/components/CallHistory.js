@@ -55,7 +55,7 @@ export default function CallHistory({ calls, emptyMessage = 'No calls have been 
           const tone = CALL_OUTCOMES[call.outcome]?.tone ?? 'neutral';
 
           return (
-            <li key={call.id} className="rounded-md border border-line bg-surface p-3">
+            <li key={call.id} className="rounded-lg border border-line bg-surface p-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone={tone}>{callOutcomeLabel(call.outcome)}</Badge>
                 <span className="text-sm text-ink-muted">

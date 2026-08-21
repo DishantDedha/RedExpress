@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { useHighContrast } from '../hooks/usePreferences';
-import { colors, spacing, radius, shadow, a11y } from '../theme';
+import { colors, spacing, radius, elevation, a11y } from '../theme';
 
 /**
  * A white panel on the grey screen background.
@@ -108,14 +108,14 @@ export function Card({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     padding: spacing.lg,
     marginBottom: spacing.lg,
     // A border as well as a shadow. Shadows vanish under Android's "remove animations"
     // setting and in high-contrast modes; the border is what keeps the card's edge visible.
     borderWidth: 1,
     borderColor: colors.borderMuted,
-    ...shadow.card,
+    ...elevation.md,
   },
   pressable: { minHeight: a11y.minTouchTarget },
   pressed: { backgroundColor: colors.primaryTint, borderColor: colors.primary },

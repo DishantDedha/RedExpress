@@ -266,12 +266,19 @@ export default function DonorFormScreen() {
 
   return (
     <Screen
-      tone="brand"
+      hero={
+        <ScreenHeader
+          title="Register as a Donor"
+          subtitle="Register today to become a lifesaving blood donor for patients."
+          tone="brand"
+          voicePurpose="A form in three parts: your details, where you live, and a password if you want one. Only the marked fields are required."
+          voiceAction="Create account"
+        />
+      }
       footer={
         <View>
           <AppButton
             title="Create Account"
-            variant="brand"
             size="large"
             loading={submitting}
             loadingLabel="Creating your account"
@@ -282,15 +289,7 @@ export default function DonorFormScreen() {
         </View>
       }
     >
-      <ScreenHeader
-        title="Register as a Donor"
-        subtitle="Register today to become a lifesaving blood donor for patients."
-        tone="brand"
-        voicePurpose="A form in three parts: your details, where you live, and a password if you want one. Only the marked fields are required."
-        voiceAction="Create account"
-      />
-
-      <LiveMessage message={status?.message} tone={status?.tone ?? 'info'} onBrand />
+      <LiveMessage message={status?.message} tone={status?.tone ?? 'info'} />
 
       {/* --- Personal Information ----------------------------------------- */}
 
@@ -543,12 +542,12 @@ export default function DonorFormScreen() {
       </Card>
 
       <View style={styles.existing}>
-        <AppText variant="body" color={colors.onBrandMuted}>
+        <AppText variant="body" color={colors.textMuted}>
           Already have an account?
         </AppText>
         <AppButton
           title="Login here"
-          variant="brandOutline"
+          variant="link"
           size="small"
           fullWidth={false}
           onPress={() => router.replace({ pathname: '/phone', params: { mode: 'login' } })}

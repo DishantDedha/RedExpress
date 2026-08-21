@@ -1,7 +1,9 @@
 import { StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { AppButton } from './AppButton';
+import { Avatar } from './Avatar';
 import { Card } from './Card';
+import { Chip } from './Chip';
 import { bloodGroupLabel } from '../data/bloodGroups';
 import { distancePhrase } from '../services/requests';
 import { callNumber } from '../utils/call';
@@ -29,12 +31,28 @@ import { colors, spacing } from '../theme';
  * the entire subtree one element, which would swallow the Call button along with the text.
  * The summary view is the grouped part; the button is its sibling.
  *
+ * ## The layout, and why the chips are hidden
+ *
+ * The card leads with the two things a caller is scanning for — who, and what group — set as
+ * an avatar, a name and a chip on one line, with the distance and place beneath. Every one of
+ * those is *also* in the summary label above, which is the element a screen reader actually
+ * stops on. So the chips themselves are hidden: reachable, they would repeat "O positive" and
+ * "Available" as bare words with nothing to say what they are properties of.
+ *
+ * The avatar is decorative too and hides itself (see `Avatar`) — initials read aloud in front
+ * of the name they are initials of are noise.
+ *
+ * ## Calling is the primary action
+ *
+ * The Call button is filled rather than outlined. On a screen whose entire purpose is to put
+ * someone on the phone during an emergency, the one control that does it should not be drawn
+ * as the quiet option.
+ *
  * ## What is not on the card
  *
  * No street address, no coordinates. The backend does not send them to an app user
  * (`donorSearchView`) — a distance is enough to decide who to ring, and publishing where
- * someone lives to anyone who can type a blood group is a different product. Phase 15
- * revisits the rest of the PII rules.
+ * someone lives to anyone who can type a blood group is a different product.
  */
 export function DonorCard({ donor, onCall }) {
   const group = bloodGroupLabel(donor.bloodGroup);
@@ -57,43 +75,46 @@ export function DonorCard({ donor, onCall }) {
   return (
     <Card style={styles.card}>
       <View accessible accessibilityLabel={summary} style={styles.summary}>
-        <AppText variant="subheading">{name}</AppText>
+        <View style={styles.identity}>
+          <Avatar name={donor.name} size={44} />
 
-        <View style={styles.facts}>
-          {/*
-            The blood group is the reason this card is on screen, so it is drawn as a chip.
-            The chip carries the words "O positive", never a bare "O+" — read aloud, "plus"
-            and "minus" are a one-syllable difference on a field where being wrong is a
-            medical error.
-          */}
-          <AppText variant="bodyStrong" color={colors.primaryOnTint} style={styles.chip}>
-            {group}
-          </AppText>
+          <View style={styles.identityText}>
+            <AppText variant="subheading">{name}</AppText>
 
-          {distance ? (
-            <AppText variant="caption" color={colors.textMuted}>
-              {capitalise(distance)}
-            </AppText>
-          ) : null}
+            {distance ? (
+              <AppText variant="caption" color={colors.textMuted} style={styles.line}>
+                {capitalise(distance)}
+                {place ? ` · ${place}` : ''}
+              </AppText>
+            ) : place ? (
+              <AppText variant="caption" color={colors.textMuted} style={styles.line}>
+                {place}
+              </AppText>
+            ) : null}
+          </View>
         </View>
 
-        {place ? (
-          <AppText variant="caption" color={colors.textMuted} style={styles.line}>
-            {place}
-          </AppText>
-        ) : null}
-
-        {/* Availability is a word, not a green dot. The colour is a supplement. */}
-        <AppText
-          variant="caption"
-          color={donor.isAvailable ? colors.success : colors.textMuted}
-          style={styles.line}
+        {/*
+          Decoration for facts the summary above has already spoken. The blood group chip
+          carries the words "O positive", never a bare "O+" — read aloud, "plus" and "minus"
+          are a one-syllable difference on a field where being wrong is a medical error, which
+          is why this app never renders the symbol at all.
+        */}
+        <View
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={styles.chips}
         >
-          {donor.isAvailable ? 'Available to donate' : 'Not available right now'}
-        </AppText>
+          <Chip label={group} tone="tint" />
+          <Chip
+            label={donor.isAvailable ? 'Available' : 'Not available'}
+            tone={donor.isAvailable ? 'success' : 'neutral'}
+            icon={donor.isAvailable ? 'check' : undefined}
+          />
+        </View>
 
         {donor.phone ? (
-          <AppText variant="caption" color={colors.textMuted} style={styles.line}>
+          <AppText variant="caption" color={colors.textMuted} style={styles.phone}>
             {formatPhoneForDisplay(donor.phone)}
           </AppText>
         ) : null}
@@ -102,7 +123,6 @@ export function DonorCard({ donor, onCall }) {
       {donor.phone ? (
         <AppButton
           title={`Call ${name}`}
-          variant="secondary"
           onPress={() => {
             onCall?.(donor);
             callNumber(donor.phone, { name });
@@ -126,22 +146,24 @@ const capitalise = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 
 const styles = StyleSheet.create({
   card: { marginBottom: spacing.md },
-  summary: { marginBottom: spacing.md },
-  facts: {
+  summary: { marginBottom: spacing.lg },
+  identity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  // Takes the remaining width so a long name wraps under itself rather than pushing the
+  // avatar off the card.
+  identityText: { flexShrink: 1, flexGrow: 1 },
+  chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: spacing.sm,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
   },
-  chip: {
-    backgroundColor: colors.primaryTint,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-  line: { marginTop: spacing.xs },
+  line: { marginTop: 2 },
+  phone: { marginTop: spacing.md },
 });
 
 export default DonorCard;

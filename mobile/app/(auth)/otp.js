@@ -158,12 +158,38 @@ export default function OtpScreen() {
 
   return (
     <Screen
-      tone="brand"
+      hero={
+        <>
+          <ScreenHeader
+            title="Verify phone number"
+            subtitle="Enter the one time password we sent you."
+            tone="brand"
+            voicePurpose="Enter the six digit code we texted you. It may fill in on its own."
+            voiceAction="Verify"
+          />
+
+          {phone ? (
+            <View
+              // One stop, one sentence. Split across two elements a reader would say "Please
+              // enter the code sent to" and then, separately, a string of digits.
+              accessible
+              accessibilityLabel={`Code sent to ${formatPhoneForSpeech(phone)}`}
+              style={styles.phoneBlock}
+            >
+              <AppText variant="body" color={colors.onBrandMuted}>
+                Please enter the code sent to
+              </AppText>
+              <AppText variant="heading" color={colors.onPrimary} style={styles.phone}>
+                {formatPhoneForDisplay(phone)}
+              </AppText>
+            </View>
+          ) : null}
+        </>
+      }
       footer={
         <View>
           <AppButton
             title="Submit"
-            variant="brand"
             size="large"
             loading={verifying}
             loadingLabel="Checking your code"
@@ -182,34 +208,8 @@ export default function OtpScreen() {
         </View>
       }
     >
-      <ScreenHeader
-        title="Verify phone number"
-        subtitle="Enter the one time password we sent you."
-        tone="brand"
-        voicePurpose="Enter the six digit code we texted you. It may fill in on its own."
-        voiceAction="Verify"
-      />
-
-      {phone ? (
-        <View
-          // One stop, one sentence. Split across two elements a reader would say "Please
-          // enter the code sent to" and then, separately, a string of digits.
-          accessible
-          accessibilityLabel={`Code sent to ${formatPhoneForSpeech(phone)}`}
-          style={styles.phoneBlock}
-        >
-          <AppText variant="body" color={colors.onBrandMuted} align="center">
-            Please enter the code sent to
-          </AppText>
-          <AppText variant="heading" color={colors.onPrimary} align="center" style={styles.phone}>
-            {formatPhoneForDisplay(phone)}
-          </AppText>
-        </View>
-      ) : null}
-
       <OtpInput
         ref={codeRef}
-        tone="brand"
         value={code}
         onChangeText={(next) => {
           setCode(next);
@@ -226,14 +226,14 @@ export default function OtpScreen() {
         onComplete={screenReaderOn ? undefined : handleVerify}
       />
 
-      <AppText variant="caption" color={colors.onBrandMuted}>
+      <AppText variant="caption" color={colors.textMuted} style={styles.expiry}>
         The code expires in {expiryMinutes} {expiryMinutes === 1 ? 'minute' : 'minutes'}.
       </AppText>
 
       {devCode ? (
         // Development only: present when the backend runs SMS_PROVIDER=console, so the flow
         // can be exercised without a live SMS gateway.
-        <AppText variant="caption" color={colors.onPrimary} style={styles.devCode}>
+        <AppText variant="caption" color={colors.info} style={styles.devCode}>
           Development build: your code is {devCode}
         </AppText>
       ) : null}
@@ -241,7 +241,7 @@ export default function OtpScreen() {
       <View style={styles.resendRow}>
         <AppButton
           title={secondsLeft > 0 ? `Resend OTP in ${secondsLeft}s` : 'Resend OTP'}
-          variant="brandOutline"
+          variant="secondary"
           fullWidth={false}
           loading={resending}
           loadingLabel="Sending a new code"
@@ -256,14 +256,15 @@ export default function OtpScreen() {
         />
       </View>
 
-      <LiveMessage message={status?.message} tone={status?.tone ?? 'info'} onBrand />
+      <LiveMessage message={status?.message} tone={status?.tone ?? 'info'} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  phoneBlock: { marginBottom: spacing.xl },
+  phoneBlock: { marginTop: spacing.lg },
   phone: { marginTop: spacing.xs },
+  expiry: { marginTop: spacing.md },
   devCode: { marginTop: spacing.sm, fontStyle: 'italic' },
   resendRow: { alignItems: 'center', marginTop: spacing.lg },
 });

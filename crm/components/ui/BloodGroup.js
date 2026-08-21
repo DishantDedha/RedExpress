@@ -14,7 +14,7 @@ export default function BloodGroup({ group, className = '' }) {
 
   return (
     <span
-      className={`inline-flex min-w-11 items-center justify-center rounded-md border border-brand bg-brand-tint px-2 py-1 text-sm font-bold text-brand-ink ${className}`}
+      className={`inline-flex min-w-11 items-center justify-center rounded-lg border border-brand bg-brand-tint px-2 py-1 text-sm font-bold text-brand-ink ${className}`}
     >
       <span aria-hidden="true">{bloodGroupShort(group)}</span>
       <span className="sr-only-focusable absolute">{bloodGroupLabel(group)}</span>

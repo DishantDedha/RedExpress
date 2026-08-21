@@ -1,12 +1,32 @@
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { AppButton, AppText, BrandMark, InitiativeFooter, Screen } from '../components';
+import {
+  AppButton,
+  AppText,
+  BrandMark,
+  InitiativeFooter,
+  Screen,
+  SectionHeading,
+} from '../components';
 import { useHeadingFocus } from '../hooks/useAccessibilityFocus';
 import { useScreenIntroduction } from '../hooks/useVoiceGuidance';
 import { colors, spacing } from '../theme';
 
 /**
- * Landing — mockup 1. The first thing anyone sees, sighted or not.
+ * Landing — the first thing anyone sees, sighted or not.
+ *
+ * ## The redesign
+ *
+ * This screen used to be red edge to edge, with two buttons drawn for a red surface. It is
+ * now the app's statement of what red and white each do: the brand owns the top of the
+ * screen as a gradient band carrying the logo and the promise, and the actions sit on a
+ * white sheet that curves up over it. Everything you are asked to *do* happens on white.
+ *
+ * That is not only a look. The white-surface button variants are the ones with the most
+ * contrast headroom — `primary` is white on red at 7.33:1 and `secondary` is a red label on
+ * white with a red outline — where the old brand-surface pair had to be inverted to avoid a
+ * 1.34:1 edge (see `AppButton`). The layout and the accessibility pull in the same
+ * direction here rather than against each other.
  *
  * ## What a screen reader user hears first
  *
@@ -26,9 +46,11 @@ import { colors, spacing } from '../theme';
  *
  * ## The two buttons
  *
- * Side by side as in the mockup, but each one flexes and the row wraps: at 200% font size
- * they stack instead of squeezing "Register" onto two clipped lines. Both are drawn for the
- * red surface — see `AppButton` for why a darker-red button on red does not pass.
+ * Stacked rather than side by side. The old row put Login and Register at identical weight
+ * and, at 200% font size, wrapped them into a stack anyway — so this is the layout most
+ * users with a large text setting were getting regardless, minus the reflow. Login leads
+ * because returning donors are the traffic; Register is a full-width outlined button
+ * directly beneath it, not a secondary afterthought.
  */
 export default function LandingScreen() {
   const router = useRouter();
@@ -45,71 +67,69 @@ export default function LandingScreen() {
 
   return (
     <Screen
-      tone="brand"
-      footer={
-        <View>
-          <View style={styles.actions}>
-            <View style={styles.action}>
-              <AppButton
-                title="Login"
-                variant="brand"
-                size="large"
-                onPress={() => router.push({ pathname: '/phone', params: { mode: 'login' } })}
-                accessibilityHint="Sign in with your registered mobile number"
-              />
-            </View>
-            <View style={styles.action}>
-              <AppButton
-                title="Register"
-                variant="brandOutline"
-                size="large"
-                onPress={() => router.push('/register')}
-                accessibilityHint="Create an account as a blood donor or to find blood"
-              />
-            </View>
-          </View>
+      heroAngle={18}
+      heroPadding={spacing.xxl}
+      hero={
+        <View style={styles.hero}>
+          <BrandMark
+            headingRef={headingRef}
+            accessibilityLabel="Red Express, emergency blood helpline"
+          />
 
-          <InitiativeFooter />
+          <AppText
+            variant="heading"
+            color={colors.onPrimary}
+            align="center"
+            // Large body copy, not a section heading: keep it out of heading navigation.
+            role="text"
+            style={styles.tagline}
+          >
+            Find{' '}
+            <AppText variant="heading" color={colors.onPrimary} role="text" style={styles.emphasis}>
+              blood donors
+            </AppText>{' '}
+            instantly and provide lifesaving support to patients in need.
+          </AppText>
         </View>
       }
     >
-      <View style={styles.hero}>
-        <BrandMark
-          headingRef={headingRef}
-          accessibilityLabel="Red Express, emergency blood helpline"
-        />
+      <SectionHeading
+        overline="GET STARTED"
+        title="Ready when you are"
+        description="Sign in with your mobile number, or create an account in under a minute."
+      />
 
-        <AppText
-          variant="heading"
-          color={colors.onPrimary}
-          align="center"
-          // Large body copy, not a section heading: keep it out of heading navigation.
-          role="text"
-          style={styles.tagline}
-        >
-          Find{' '}
-          <AppText variant="heading" color={colors.onPrimary} role="text" style={styles.emphasis}>
-            blood donors
-          </AppText>{' '}
-          instantly and provide lifesaving support to patients in need.
-        </AppText>
-      </View>
+      <AppButton
+        title="Login"
+        size="large"
+        onPress={() => router.push({ pathname: '/phone', params: { mode: 'login' } })}
+        accessibilityHint="Sign in with your registered mobile number"
+        style={styles.action}
+      />
+
+      <AppButton
+        title="Register"
+        variant="secondary"
+        size="large"
+        onPress={() => router.push('/register')}
+        accessibilityHint="Create an account as a blood donor or to find blood"
+      />
+
+      <View style={styles.spacer} />
+
+      <InitiativeFooter />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: { flex: 1, justifyContent: 'center', paddingVertical: spacing.xxl },
-  tagline: { marginTop: spacing.xxl, paddingHorizontal: spacing.sm },
+  hero: { alignItems: 'stretch', paddingVertical: spacing.lg },
+  tagline: { marginTop: spacing.xl, paddingHorizontal: spacing.sm },
   // Bold carries the emphasis on screen. It is not the only signal for anyone else: the
   // sentence reads the same either way, so nothing is lost when the styling is not perceived.
   emphasis: { fontWeight: '800' },
-  actions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  // Each button takes half the row but may not shrink below a readable width; once the
-  // labels outgrow that, `flexWrap` above puts them on separate lines.
-  action: { flexGrow: 1, flexBasis: 140 },
+  action: { marginBottom: spacing.md },
+  // Pushes the credit to the bottom of the sheet without pinning it there, so it moves down
+  // rather than overlapping when the text size grows.
+  spacer: { flexGrow: 1, minHeight: spacing.xl },
 });

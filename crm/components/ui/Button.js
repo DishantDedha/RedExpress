@@ -41,7 +41,7 @@ export default function Button({
       disabled={disabled || busy}
       aria-busy={busy || undefined}
       className={[
-        'inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-colors',
+        'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors',
         'disabled:cursor-not-allowed',
         VARIANTS[variant] ?? VARIANTS.primary,
         SIZES[size] ?? SIZES.md,

@@ -118,7 +118,7 @@ export default function LoginForm({ reason, next }) {
       <h1 className="text-xl font-bold text-ink">Sign in</h1>
 
       {notice ? (
-        <p role="status" className="rounded-md border border-info bg-info-tint p-3 text-sm text-ink">
+        <p role="status" className="rounded-lg border border-info bg-info-tint p-3 text-sm text-ink">
           {notice}
         </p>
       ) : null}
@@ -128,7 +128,7 @@ export default function LoginForm({ reason, next }) {
           ref={alertRef}
           role="alert"
           tabIndex={-1}
-          className="rounded-md border border-danger bg-danger-tint p-3 text-sm font-medium text-ink"
+          className="rounded-lg border border-danger bg-danger-tint p-3 text-sm font-medium text-ink"
         >
           <span aria-hidden="true" className="mr-1.5 text-danger">
             ⚠

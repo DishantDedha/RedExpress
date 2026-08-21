@@ -51,7 +51,7 @@ export default async function RequestDetailPage({ params }) {
         actions={
           <Link
             href="/dashboard/requests"
-            className="inline-flex min-h-11 items-center rounded-md border border-line-strong bg-card px-4 text-sm font-semibold text-ink hover:bg-surface"
+            className="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-4 text-sm font-semibold text-ink hover:bg-surface"
           >
             Back to requests
           </Link>
@@ -142,7 +142,7 @@ export default async function RequestDetailPage({ params }) {
         {isPreview && matching ? (
           // Honesty about where the list came from. A staff member ringing someone who never
           // got a push needs to open the call differently.
-          <p className="mt-3 rounded-md border border-info bg-info-tint p-3 text-sm text-ink">
+          <p className="mt-3 rounded-lg border border-info bg-info-tint p-3 text-sm text-ink">
             <span aria-hidden="true">ℹ </span>
             Preview list. Matched by {matching.strategy === 'area' ? 'district and city' : `distance, within ${matching.radiusKm} km`}
             {matching.fellBackToArea ? ', after no one was found within the search radius' : ''}.
@@ -163,7 +163,7 @@ export default async function RequestDetailPage({ params }) {
             >
               <Link
                 href={`/dashboard/users?role=DONOR&bloodGroup=${request.bloodGroup}&district=${encodeURIComponent(request.district ?? '')}`}
-                className="inline-flex min-h-11 items-center rounded-md bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-pressed"
+                className="inline-flex min-h-11 items-center rounded-lg bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-pressed"
               >
                 Search donors by hand
               </Link>

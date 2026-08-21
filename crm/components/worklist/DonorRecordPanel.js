@@ -49,7 +49,7 @@ export default function DonorRecordPanel({ user, initialCalls, canBeMarked }) {
       {status === 'DEAD' ? (
         // Stated in full, every time. The consequence of this status is the reason it exists,
         // and a red badge communicates none of it.
-        <p className="rounded-md border border-warning bg-warning-tint p-3 text-sm text-ink">
+        <p className="rounded-lg border border-warning bg-warning-tint p-3 text-sm text-ink">
           <span aria-hidden="true">▲ </span>
           Marked unreachable. They are hidden from donor search, receive no alerts, and were signed out
           on every device. They return to active by themselves the next time they sign in on the app with

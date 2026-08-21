@@ -10,10 +10,10 @@ import {
   Screen,
   ScreenHeader,
   useAnnounce,
-} from '../../components';
-import { listNotifications, markNotificationRead, timeAgo } from '../../services/notifications';
-import { routeForNotification } from '../../services/push';
-import { colors, spacing } from '../../theme';
+} from '../../../components';
+import { listNotifications, markNotificationRead, timeAgo } from '../../../services/notifications';
+import { routeForNotification } from '../../../services/push';
+import { colors, spacing } from '../../../theme';
 
 /**
  * The in-app inbox.
@@ -107,20 +107,23 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <Screen>
-      <ScreenHeader
-        title="Your alerts"
-        subtitle={
-          meta
-            ? meta.unreadCount
-              ? `${meta.unreadCount} unread.`
-              : 'Nothing unread.'
-            : 'Requests you have been alerted about.'
-        }
-        voicePurpose="Blood requests you have been alerted about. Open one to answer it."
-        voiceAction="Open an alert"
-      />
-
+    <Screen
+      hero={
+        <ScreenHeader
+          title="Your alerts"
+          subtitle={
+            meta
+              ? meta.unreadCount
+                ? `${meta.unreadCount} unread.`
+                : 'Nothing unread.'
+              : 'Requests you have been alerted about.'
+          }
+          tone="brand"
+          voicePurpose="Blood requests you have been alerted about. Open one to answer it."
+          voiceAction="Open an alert"
+        />
+      }
+    >
       <Card>
         <AppSwitch
           label="Show only unread"

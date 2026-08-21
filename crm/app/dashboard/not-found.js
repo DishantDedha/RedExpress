@@ -22,13 +22,13 @@ export default function DashboardNotFound() {
         <div className="flex flex-wrap justify-center gap-3">
           <Link
             href="/dashboard/users"
-            className="inline-flex min-h-11 items-center rounded-md bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-pressed"
+            className="inline-flex min-h-11 items-center rounded-lg bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-pressed"
           >
             Search people
           </Link>
           <Link
             href="/dashboard/requests"
-            className="inline-flex min-h-11 items-center rounded-md border border-line-strong bg-card px-4 text-sm font-semibold text-ink hover:bg-surface"
+            className="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-card px-4 text-sm font-semibold text-ink hover:bg-surface"
           >
             See blood requests
           </Link>

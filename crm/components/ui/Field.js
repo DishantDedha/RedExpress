@@ -51,7 +51,7 @@ export default function Field({ label, error, hint, id, type = 'text', required 
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={describedBy}
         className={[
-          'min-h-11 rounded-md border bg-card px-3 text-base text-ink placeholder:text-ink-muted',
+          'min-h-11 rounded-lg border bg-card px-3 text-base text-ink placeholder:text-ink-muted',
           error ? 'border-danger' : 'border-line-strong',
         ].join(' ')}
         {...rest}

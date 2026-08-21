@@ -23,6 +23,11 @@ import { spacing } from '../../theme';
  * is verified, which is a parameter, not a second screen. `mode` and `role` ride through to
  * `/otp`.
  *
+ * The title sits on a red band and the field sits on white below it. That is not only for
+ * looks: a text input on a saturated background has to invert its outline, its label and its
+ * helper text, and every one of those is a pair that has to be measured separately. On white
+ * the field is the same field as everywhere else in the app.
+ *
  * ## Accessibility decisions on this screen
  *
  * **The field is not auto-focused.** Auto-focus is the obvious convenience, and it fights
@@ -121,12 +126,23 @@ export default function PhoneScreen() {
 
   return (
     <Screen
-      tone="brand"
+      hero={
+        <ScreenHeader
+          title="Your mobile number"
+          subtitle={
+            registering
+              ? 'We will send a one time password to confirm this is your number.'
+              : 'We will send a one time password to sign you in.'
+          }
+          tone="brand"
+          voicePurpose="Enter your ten digit mobile number. We will text you a one time password."
+          voiceAction="Send one time password"
+        />
+      }
       footer={
         <View>
           <AppButton
             title="Send OTP"
-            variant="brand"
             size="large"
             loading={sending}
             loadingLabel="Sending code"
@@ -138,23 +154,10 @@ export default function PhoneScreen() {
         </View>
       }
     >
-      <ScreenHeader
-        title="Your mobile number"
-        subtitle={
-          registering
-            ? 'We will send a one time password to confirm this is your number.'
-            : 'We will send a one time password to sign you in.'
-        }
-        tone="brand"
-        voicePurpose="Enter your ten digit mobile number. We will text you a one time password."
-        voiceAction="Send one time password"
-      />
-
       {signedOutNotice ? <LiveMessage message={signedOutNotice} tone={noticeTone} /> : null}
 
       <AppTextInput
         ref={inputRef}
-        tone="brand"
         label="Mobile number"
         required
         value={value}
@@ -176,9 +179,10 @@ export default function PhoneScreen() {
         containerStyle={styles.field}
       />
 
-      {/* Progress and outcome, shown and spoken. `onBrand` keeps the bare progress text
-          legible on red. */}
-      <LiveMessage message={status?.message} tone={status?.tone ?? 'info'} onBrand />
+      {/* Progress and outcome, shown and spoken. The field and the status now sit on the
+          white sheet, so the default light-surface colours apply — `onBrand` was only ever
+          there to keep the bare progress text legible on red. */}
+      <LiveMessage message={status?.message} tone={status?.tone ?? 'info'} />
     </Screen>
   );
 }

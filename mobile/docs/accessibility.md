@@ -174,7 +174,7 @@ set of colours to check and no chance of the two drifting apart.
 | | Default | High contrast |
 | --- | --- | --- |
 | Helper text and captions | `#5A5D66`, 6.58:1 | `#1B1B1F`, **17.17:1** |
-| Muted copy on the red screens | `#F6D4D9`, 5.35:1 | `#FFFFFF`, **7.33:1** |
+| Muted copy on the red surfaces | `#FFE9EC`, 6.32:1 | `#FFFFFF`, **7.33:1** |
 | Input and button outlines | `#878A93`, 3.45:1, 1px | `#1B1B1F`, **17.17:1**, 2px |
 | Card edges and list dividers | `#C4C7CF`, 1.69:1 | `#878A93`, 3.45:1, 2px |
 | Primary button fill | `#B00020`, 7.33:1 | `#8C0019`, **9.86:1** (AAA) |
