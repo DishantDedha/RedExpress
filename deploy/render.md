@@ -12,7 +12,12 @@ without a schema change.
 |---|---|---|
 | API | Render free web service, Singapore | £0 |
 | Database | Neon free tier | £0 |
-| Keep-alive | GitHub Actions, every 10 min | £0 |
+
+**Cold starts are accepted here.** A free Render service sleeps after 15 minutes idle and takes
+30–60 seconds to answer the request that wakes it. Keeping it warm is possible — a ping every
+ten minutes costs about 720 of the 750 free instance-hours — but it was judged not worth the
+allowance during testing. If a cold start ever turns up in front of someone who matters, point
+UptimeRobot or cron-job.org at `/health/ready` and it goes away.
 
 ---
 
@@ -67,9 +72,8 @@ Render assigns a hostname like `redexpress-api.onrender.com`.
 
 1. **Settings → Environment**: set `API_BASE_URL` to `https://<that host>` and redeploy.
    Uploaded files are handed to clients as absolute URLs built from it.
-2. **GitHub → Settings → Secrets and variables → Actions → Variables**: add
-   `API_BASE_URL` with the same value. That is what
-   [`keepalive.yml`](../.github/workflows/keepalive.yml) pings.
+2. **Vercel → Environment Variables**: point `BACKEND_API_BASE_URL` at the same host and
+   redeploy the CRM.
 3. Create the one real administrator. Render's shell is on paid plans, so run it locally
    against the Neon database:
 
@@ -107,12 +111,13 @@ not declare it.
 egress address is not fixed on the free plan. Create that key with IP Security **off**, keep it
 out of screenshots, and rotate it if it is ever exposed.
 
-**Cold starts if the keep-alive stops.** GitHub's scheduler runs late under load. If a 30–60
-second wait ever appears in front of someone who matters, move the ping to UptimeRobot or
-cron-job.org.
+**Cold starts.** The service sleeps after 15 minutes idle and takes 30–60 seconds to answer the
+request that wakes it. Accepted deliberately here. If it ever appears in front of someone who
+matters, point UptimeRobot or cron-job.org at `/health/ready`.
 
-**750 instance-hours per month.** A single service running continuously uses ~720. There is no
-room for a second always-on free service in the same workspace.
+**750 instance-hours per month, shared across the whole workspace.** Sleeping services consume
+none, so this is not a constraint while nothing is kept warm — but it becomes one the moment
+anything runs continuously, and it is counted per workspace rather than per service.
 
 ## Before real donors use this
 
