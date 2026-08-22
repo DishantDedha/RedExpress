@@ -19,7 +19,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://35-154-63-13.sslip.io",
+        "EXPO_PUBLIC_API_BASE_URL": "https://redexpress-api.onrender.com",
         "EXPO_PUBLIC_SUPPORT_EMAIL": "dishantdedha@gmail.com",
         "EXPO_PUBLIC_ENABLE_VOICE_INPUT": "false"
       }
