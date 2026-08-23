@@ -13,6 +13,7 @@ import {
 } from '../../components';
 import { useScreenReaderEnabled } from '../../hooks/useAccessibilityFocus';
 import { requestOtp, verifyOtp } from '../../services/auth';
+import { config } from '../../services/config';
 import { hapticError, hapticSuccess } from '../../services/feedback';
 import { formatPhoneForDisplay, formatPhoneForSpeech } from '../../utils/phone';
 import { colors, spacing } from '../../theme';
@@ -47,6 +48,14 @@ import { colors, spacing } from '../../theme';
  */
 
 const RESEND_COOLDOWN_SECONDS = 30;
+
+/**
+ * The code length comes from MSG91, not from us — their widget settings decide it. Spoken
+ * out as a word because a screen reader saying "Enter all 4 digits" is fine but "Enter all
+ * four digits" is what a person says.
+ */
+const OTP_LENGTH = config.otpLength;
+const OTP_LENGTH_WORD = { 4: 'four', 5: 'five', 6: 'six', 7: 'seven', 8: 'eight' }[OTP_LENGTH] ?? String(OTP_LENGTH);
 
 export default function OtpScreen() {
   const router = useRouter();
@@ -87,7 +96,7 @@ export default function OtpScreen() {
   const handleVerify = useCallback(
     async (submitted) => {
       const value = submitted ?? code;
-      if (verifying || value.length !== 6) return;
+      if (verifying || value.length !== OTP_LENGTH) return;
 
       setError(null);
       setVerifying(true);
@@ -164,7 +173,7 @@ export default function OtpScreen() {
             title="Verify phone number"
             subtitle="Enter the one time password we sent you."
             tone="brand"
-            voicePurpose="Enter the six digit code we texted you. It may fill in on its own."
+            voicePurpose={`Enter the ${OTP_LENGTH_WORD} digit code we texted you. It may fill in on its own.`}
             voiceAction="Verify"
           />
 
@@ -193,12 +202,12 @@ export default function OtpScreen() {
             size="large"
             loading={verifying}
             loadingLabel="Checking your code"
-            disabled={code.length !== 6}
+            disabled={code.length !== OTP_LENGTH}
             onPress={() => handleVerify()}
             accessibilityLabel="Submit verification code"
             accessibilityHint={
-              code.length !== 6
-                ? 'Enter all six digits to continue'
+              code.length !== OTP_LENGTH
+                ? `Enter all ${OTP_LENGTH_WORD} digits to continue`
                 : mode === 'register'
                   ? 'Checks your code and continues to the registration form'
                   : 'Checks your code and signs you in'
@@ -210,6 +219,7 @@ export default function OtpScreen() {
     >
       <OtpInput
         ref={codeRef}
+        length={OTP_LENGTH}
         value={code}
         onChangeText={(next) => {
           setCode(next);

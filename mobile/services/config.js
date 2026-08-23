@@ -58,6 +58,18 @@ export const config = {
   msg91WidgetId: process.env.EXPO_PUBLIC_MSG91_WIDGET_ID || null,
   msg91TokenAuth: process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH || null,
 
+  /**
+   * How many digits the code has.
+   *
+   * Not a constant, because the number is not ours: MSG91's widget settings decide how long
+   * the code it sends is, and the field has to match or the user types four digits into six
+   * boxes and the Submit button never enables. Change it there, change it here.
+   *
+   * It also has to agree with the backend's OTP_LENGTH, which governs the codes the fallback
+   * path generates and the length OTP_MASTER_CODE is required to be.
+   */
+  otpLength: Number(process.env.EXPO_PUBLIC_OTP_LENGTH) || 6,
+
   // Shown on the privacy screen and behind the registration form's terms checkbox. Null
   // rather than a placeholder URL when unset: the privacy screen says the document is not in
   // this build and offers the support address, which is honest, where a dead link is not.
