@@ -46,8 +46,18 @@ ADMIN_EMAIL=ops@example.org ADMIN_NAME="Ops Lead" ADMIN_PASSWORD='…' \
 
 **Do not run `db:seed` in production.** It inserts thirty fictional donors with real-looking
 Odisha coordinates and phone numbers. Staff would find them in search and ring them during an
-emergency. `create:admin` is the production path: one ADMIN account, nothing else, and further
-staff are added from the dashboard.
+emergency. `create:admin` is the production path: one ADMIN account, and nothing else.
+
+**Every staff account is created this way — there is no self-service.** The CRM has no sign-up
+page, deliberately: a dashboard that exposes every donor's phone number, address and
+coordinates must not accept strangers. But it has no staff-management screen either, and no
+endpoint behind one, so *every* account needs someone with the production `DATABASE_URL` to run
+this command. Adding a colleague is currently an engineering task.
+
+That is workable while the team is two or three people and a liability at handover, because it
+leaves the operator permanently dependent on whoever holds the database credentials. Closing it
+means an ADMIN-only create/list/deactivate endpoint and a screen for it — deliberately deferred,
+not overlooked.
 
 The script is re-runnable and is also the recovery path for a lost admin password — it resets
 the hash and bumps `tokenVersion`, killing any session the previous holder had.
