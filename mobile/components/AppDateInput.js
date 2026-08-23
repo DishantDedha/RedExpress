@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useRef } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Platform, StyleSheet, TextInput, View } from 'react-native';
 import { AppText } from './AppText';
 import { announce } from './LiveMessage';
@@ -79,7 +79,29 @@ export function AppDateInput({
   containerStyle,
   ref,
 }) {
-  const parts = partsOf(value);
+  /**
+   * The three boxes keep their own state, and this is not an optimisation.
+   *
+   * They cannot be derived from `value`, because `joinParts` returns null for anything
+   * incomplete: the first digit typed into Day would emit null, the parent would store null,
+   * `partsOf(null)` would give three empty strings, and the keystroke would vanish about a
+   * frame after appearing. Every partial date is a state the exchanged `YYYY-MM-DD` format
+   * cannot represent, and holding it is exactly what local state is for.
+   */
+  const [parts, setParts] = useState(() => partsOf(value));
+
+  /**
+   * Re-seed when the date changes from outside — a profile screen loading a saved value, or a
+   * form being reset. `emitted` is what tells that apart from `value` arriving back as our own
+   * echo, which must never overwrite a half-typed date.
+   */
+  const emitted = useRef(value);
+  useEffect(() => {
+    if (value === emitted.current) return;
+    emitted.current = value;
+    setParts(partsOf(value));
+  }, [value]);
+
   const dayRef = useRef(null);
   const lastError = useRef(null);
   const contrast = useHighContrast();
@@ -108,7 +130,14 @@ export function AppDateInput({
 
   function update(field, raw) {
     const digits = raw.replace(/\D/g, '').slice(0, field === 'year' ? 4 : 2);
-    onChange?.(joinParts({ ...parts, [field]: digits }), { ...parts, [field]: digits });
+    const next = { ...parts, [field]: digits };
+    const joined = joinParts(next);
+
+    // Recorded before the parent hears about it, so the value coming back is recognised as
+    // ours and does not trigger the re-seed above.
+    emitted.current = joined;
+    setParts(next);
+    onChange?.(joined, next);
   }
 
   const field = (name, fieldLabel, width, inputRef) => (
