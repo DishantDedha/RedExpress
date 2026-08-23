@@ -13,7 +13,6 @@ import {
   InitiativeFooter,
   LiveMessage,
   LocationCapture,
-  PhotoPicker,
   Screen,
   ScreenHeader,
   useAnnounce,
@@ -89,7 +88,6 @@ export default function DonorFormScreen() {
     confirmPassword: '',
     terms: false,
   });
-  const [photo, setPhoto] = useState(null);
   const [coords, setCoords] = useState(null);
   const [phone, setPhone] = useState(params.phone ? String(params.phone) : '');
   const [errors, setErrors] = useState({});
@@ -205,26 +203,23 @@ export default function DonorFormScreen() {
     setStatus({ message: 'Creating your donor account…', tone: 'progress' });
 
     try {
-      const result = await registerDonor(
-        {
-          fullName: values.fullName.trim(),
-          email: values.email.trim(),
-          phone,
-          bloodGroup: values.bloodGroup,
-          gender: values.gender,
-          dateOfBirth: values.dateOfBirth ?? undefined,
-          state: values.state,
-          district: values.district,
-          city: resolvedCity,
-          pincode: values.pincode.trim(),
-          address: values.address.trim(),
-          latitude: coords?.latitude,
-          longitude: coords?.longitude,
-          password: values.password || undefined,
-          confirmPassword: values.password ? values.confirmPassword : undefined,
-        },
-        photo,
-      );
+      const result = await registerDonor({
+        fullName: values.fullName.trim(),
+        email: values.email.trim(),
+        phone,
+        bloodGroup: values.bloodGroup,
+        gender: values.gender,
+        dateOfBirth: values.dateOfBirth ?? undefined,
+        state: values.state,
+        district: values.district,
+        city: resolvedCity,
+        pincode: values.pincode.trim(),
+        address: values.address.trim(),
+        latitude: coords?.latitude,
+        longitude: coords?.longitude,
+        password: values.password || undefined,
+        confirmPassword: values.password ? values.confirmPassword : undefined,
+      });
 
       hapticSuccess();
       setStatus(null);
@@ -377,8 +372,6 @@ export default function DonorFormScreen() {
           error={errors.dateOfBirth}
           helperText={`Optional. Donors must be between ${MIN_DONOR_AGE} and ${MAX_DONOR_AGE} years old.`}
         />
-
-        <PhotoPicker value={photo} onChange={setPhoto} disabled={submitting} />
       </Card>
 
       {/* --- Location Information ------------------------------------------ */}

@@ -1,4 +1,4 @@
-import { api, request } from './apiClient';
+import { api } from './apiClient';
 import { getAccessToken, getCachedUser, getRefreshToken, saveSession } from './tokenStorage';
 
 /**
@@ -23,53 +23,55 @@ async function cacheUser(user) {
 /**
  * Donor registration — the big form (mockups 6 and 11).
  *
- * Sent as multipart, always, whether or not a photo is attached: the backend runs the same
- * `optionalUpload` middleware either way, and one code path is easier to reason about than a
- * JSON branch and a multipart branch that must be kept in step.
+ * Plain JSON, no file. `optionalUpload` on the backend passes a JSON body through untouched,
+ * so this was always a supported shape, not a workaround bolted on.
  *
- * `fetch` sets the multipart boundary itself — `apiClient` deliberately does not set
- * Content-Type on a FormData body, because doing so produces a request the server cannot
- * parse.
+ * ## Why there is no photo parameter
+ *
+ * There was one, sent as multipart with `form.append('profilePhoto', { uri, name, type })` —
+ * the shape React Native's own FormData docs prescribe. In practice, on this project's React
+ * Native version with the New Architecture on, the native layer rejects that exact object
+ * with `Error: Unsupported FormDataPart implementation`, thrown before the request leaves the
+ * device — every registration that reached this code path failed outright, with no server
+ * involved and nothing a retry could fix.
+ *
+ * Chasing the native incompatibility was not worth it tonight, because the destination has
+ * the same problem from the other side: Render's free web service has no persistent disk, and
+ * `STORAGE_DRIVER=local` writes to it, so any photo that did upload would be deleted on the
+ * next deploy anyway. Both ends of this feature need work — a dev/production build to get a
+ * working native FormData implementation, and S3 storage so an upload survives a redeploy —
+ * before it is worth turning back on. `components/PhotoPicker.js` is unchanged and ready for
+ * that day; only the two screens that called it were adjusted.
  */
-export async function registerDonor(values, photo) {
-  const form = new FormData();
+export async function registerDonor(values) {
+  const body = {};
 
-  const fields = {
-    fullName: values.fullName,
-    email: values.email,
-    phone: values.phone,
-    bloodGroup: values.bloodGroup,
-    gender: values.gender,
-    dateOfBirth: values.dateOfBirth,
-    state: values.state,
-    district: values.district,
-    city: values.city,
-    pincode: values.pincode,
-    address: values.address,
-    latitude: values.latitude,
-    longitude: values.longitude,
-    password: values.password,
-    confirmPassword: values.confirmPassword,
-  };
-
-  for (const [key, value] of Object.entries(fields)) {
+  for (const key of [
+    'fullName',
+    'email',
+    'phone',
+    'bloodGroup',
+    'gender',
+    'dateOfBirth',
+    'state',
+    'district',
+    'city',
+    'pincode',
+    'address',
+    'latitude',
+    'longitude',
+    'password',
+    'confirmPassword',
+  ]) {
+    const value = values[key];
     // Absent is not the same as empty. The backend's `optionalText` treats "" as "not
     // provided", but latitude and longitude must be sent together or not at all, so an
     // empty string for one of them would be a validation error rather than an omission.
     if (value === undefined || value === null || value === '') continue;
-    form.append(key, String(value));
+    body[key] = value;
   }
 
-  if (photo) {
-    // React Native's FormData takes this triple rather than a Blob.
-    form.append('profilePhoto', {
-      uri: photo.uri,
-      name: photo.name,
-      type: photo.mimeType,
-    });
-  }
-
-  const result = await request('/donors/register', { method: 'POST', body: form });
+  const result = await api.post('/donors/register', body);
   await cacheUser(result.user);
   return result;
 }
@@ -99,23 +101,17 @@ export function getMe() {
 }
 
 /**
- * Partial profile update. Sent as multipart for the same reason as registration: a photo may
- * be part of it, and the backend accepts either.
+ * Partial profile update. Plain JSON, no file — see the note on `registerDonor` for why photo
+ * upload is off for now.
  */
-export async function updateDonorProfile(changes, photo) {
-  const form = new FormData();
-
+export async function updateDonorProfile(changes) {
+  const body = {};
   for (const [key, value] of Object.entries(changes)) {
     if (value === undefined) continue;
-    // `removePhoto=true` deletes the current photo without uploading a replacement.
-    form.append(key, value === null ? '' : String(value));
+    body[key] = value;
   }
 
-  if (photo) {
-    form.append('profilePhoto', { uri: photo.uri, name: photo.name, type: photo.mimeType });
-  }
-
-  const result = await request('/donors/me', { method: 'PATCH', body: form });
+  const result = await api.patch('/donors/me', body);
   await cacheUser(result.user);
   return result;
 }

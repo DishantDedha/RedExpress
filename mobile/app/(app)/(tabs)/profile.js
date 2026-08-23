@@ -12,7 +12,6 @@ import {
   Card,
   LiveMessage,
   LocationCapture,
-  PhotoPicker,
   Screen,
   ScreenHeader,
   SectionHeading,
@@ -76,7 +75,6 @@ export default function ProfileScreen() {
 
   const [editing, setEditing] = useState(false);
   const [values, setValues] = useState(null);
-  const [photo, setPhoto] = useState(null);
   const [coords, setCoords] = useState(null);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -165,7 +163,6 @@ export default function ProfileScreen() {
       pincode: profile.pincode ?? '',
       address: profile.address ?? '',
     });
-    setPhoto(null);
     setCoords(null);
     setErrors({});
     setStatus(null);
@@ -214,23 +211,20 @@ export default function ProfileScreen() {
     setStatus({ message: 'Saving your changes…', tone: 'progress' });
 
     try {
-      const result = await updateDonorProfile(
-        {
-          fullName: values.fullName.trim(),
-          email: values.email.trim(),
-          bloodGroup: values.bloodGroup,
-          gender: values.gender,
-          dateOfBirth: values.dateOfBirth ?? undefined,
-          state: values.state,
-          district: values.district,
-          city: cityIsOther ? values.otherCity.trim() : values.city,
-          pincode: values.pincode.trim(),
-          address: values.address.trim(),
-          latitude: coords?.latitude,
-          longitude: coords?.longitude,
-        },
-        photo,
-      );
+      const result = await updateDonorProfile({
+        fullName: values.fullName.trim(),
+        email: values.email.trim(),
+        bloodGroup: values.bloodGroup,
+        gender: values.gender,
+        dateOfBirth: values.dateOfBirth ?? undefined,
+        state: values.state,
+        district: values.district,
+        city: cityIsOther ? values.otherCity.trim() : values.city,
+        pincode: values.pincode.trim(),
+        address: values.address.trim(),
+        latitude: coords?.latitude,
+        longitude: coords?.longitude,
+      });
 
       setProfile(result.donorProfile);
       setUser(result.user);
@@ -471,12 +465,9 @@ export default function ProfileScreen() {
           setErrors={setErrors}
           say={say}
           cityIsOther={cityIsOther}
-          photo={photo}
-          setPhoto={setPhoto}
           coords={coords}
           setCoords={setCoords}
           saving={saving}
-          currentPhotoUrl={profile.profilePhotoUrl}
         />
       ) : (
         <Card title="Your details">
@@ -616,12 +607,9 @@ function EditForm({
   setErrors,
   say,
   cityIsOther,
-  photo,
-  setPhoto,
   coords,
   setCoords,
   saving,
-  currentPhotoUrl,
 }) {
   const districts = districtsOf(values.state);
   const cities = citiesOf(values.state, values.district);
@@ -688,12 +676,6 @@ function EditForm({
           helperText="Optional."
         />
 
-        <PhotoPicker
-          value={photo}
-          onChange={setPhoto}
-          disabled={saving}
-          label={currentPhotoUrl ? 'Replace your profile photo' : 'Profile photo'}
-        />
       </Card>
 
       <Card title="Location">
