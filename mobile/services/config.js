@@ -37,6 +37,20 @@ export const config = {
   // Needed by expo-notifications to mint a push token (Phase 10).
   projectId: process.env.EXPO_PUBLIC_PROJECT_ID || null,
 
+  /**
+   * Whether this build can actually receive push notifications.
+   *
+   * Off unless the build was made with FCM credentials configured in EAS. Without them the
+   * token request fails deep inside expo-notifications, *after* the user has already been
+   * asked for OS permission — so they grant it and are then told alerts do not work, which
+   * reads as a broken app rather than a feature that was not built yet.
+   *
+   * Off does not mean silent: every alert is still written to the in-app inbox by the
+   * backend, so a donor who opens the app sees every request they were matched to. What is
+   * lost is the banner when the app is closed.
+   */
+  enablePush: process.env.EXPO_PUBLIC_ENABLE_PUSH === 'true',
+
   // MSG91's OTP widget. Both values are public by design — they identify the widget to
   // MSG91's API and are visible in any client that uses it. The auth key that can *spend*
   // money stays on the server and is never here. Unset means the app falls back to the

@@ -50,7 +50,12 @@ import { getPushToken, savePushToken } from './tokenStorage';
 const ANDROID_CHANNEL_ID = 'blood-requests';
 
 /**
- * True in Expo Go, false in a dev/production build.
+ * Whether push can work in this build at all.
+ *
+ * False unless EXPO_PUBLIC_ENABLE_PUSH is on — a build made without FCM credentials would
+ * otherwise ask for notification permission and only then discover it cannot mint a token,
+ * leaving the user having granted something that does nothing. The in-app inbox is unaffected
+ * either way; it is fed over HTTP and never needed a push token.
  *
  * Expo Go dropped remote push in SDK 53, and on Android it does not merely fail at
  * `getExpoPushTokenAsync` — *importing* `expo-notifications` throws outright. A top-level
@@ -63,7 +68,8 @@ const ANDROID_CHANNEL_ID = 'blood-requests';
  * the contract with the UI (`components/PushConsent.js`, `app/(app)/privacy.js`) — it just
  * could never be reached, because the import crashed first.
  */
-export const pushSupported = Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
+export const pushSupported =
+  config.enablePush && Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
 
 let notificationsModule = null;
 
