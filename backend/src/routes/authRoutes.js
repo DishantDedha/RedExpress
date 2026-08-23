@@ -7,6 +7,7 @@ import {
   otpVerifySchema,
   refreshSchema,
   staffLoginSchema,
+  widgetVerifySchema,
 } from '../validation/authSchemas.js';
 import {
   refreshHandler,
@@ -14,6 +15,7 @@ import {
   sessionHandler,
   staffLoginHandler,
   verifyOtpHandler,
+  verifyWidgetHandler,
 } from '../controllers/authController.js';
 
 export const authRouter = Router();
@@ -25,6 +27,15 @@ export const authRouter = Router();
 // sends garbage. otpService adds a second, per-phone limit on top of the per-IP one here.
 authRouter.post('/otp/request', otpRequestLimiter, validate(otpRequestSchema), requestOtpHandler);
 authRouter.post('/otp/verify', authAttemptLimiter, validate(otpVerifySchema), verifyOtpHandler);
+
+// The MSG91 OTP-widget route in. Same limiter: MSG91 checks the code, but this endpoint
+// still mints our tokens, so it is worth the same ceiling as any other way to obtain them.
+authRouter.post(
+  '/otp/widget-verify',
+  authAttemptLimiter,
+  validate(widgetVerifySchema),
+  verifyWidgetHandler,
+);
 
 // CRM users — email + password. Same limiter as OTP verify: both are "guess until it works".
 authRouter.post('/staff/login', authAttemptLimiter, validate(staffLoginSchema), staffLoginHandler);

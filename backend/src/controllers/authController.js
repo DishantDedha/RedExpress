@@ -3,6 +3,7 @@ import { asyncHandler } from '../utils/errors.js';
 import { maskPhone } from '../utils/phone.js';
 import {
   completePhoneLogin,
+  completeWidgetLogin,
   publicUser,
   refreshAccessToken,
   staffLogin,
@@ -26,6 +27,18 @@ export const requestOtpHandler = asyncHandler(async (req, res) => {
 
 export const verifyOtpHandler = asyncHandler(async (req, res) => {
   const result = await completePhoneLogin(req.body);
+  res.status(200).json(result);
+});
+
+/**
+ * POST /auth/otp/widget-verify
+ *
+ * The MSG91 OTP-widget route in. The app sends only the access token the widget gave it; the
+ * phone number is whatever MSG91 says that token belongs to. The response is identical in
+ * shape to /otp/verify, so the app's sign-in handling does not fork.
+ */
+export const verifyWidgetHandler = asyncHandler(async (req, res) => {
+  const result = await completeWidgetLogin(req.body);
   res.status(200).json(result);
 });
 

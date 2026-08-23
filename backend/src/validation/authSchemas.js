@@ -27,6 +27,27 @@ export const otpVerifySchema = z.object({
   }),
 });
 
+/**
+ * Sign-in with an MSG91 OTP-widget token.
+ *
+ * Note what is absent: a phone number. The number is read from MSG91's verification of the
+ * token and never from the request, because a client-supplied one would let anyone verify
+ * their own phone and then claim a donor's — see services/msg91Widget.js.
+ */
+export const widgetVerifySchema = z.object({
+  accessToken: z
+    .string({ required_error: 'Verification could not be completed. Please try again.' })
+    .trim()
+    .min(1, 'Verification could not be completed. Please try again.')
+    // Generous: MSG91 owns this token's format and may change its length. Only long enough to
+    // reject an empty or obviously junk value before spending a call on their API.
+    .max(4096, 'Verification could not be completed. Please try again.'),
+  // Only used when the account is created; existing users keep their stored role.
+  role: z.enum(['DONOR', 'RECEIVER'], {
+    errorMap: () => ({ message: 'Choose whether you want to donate or find blood.' }),
+  }),
+});
+
 export const staffLoginSchema = z.object({
   email: z
     .string({ required_error: 'Enter your email address.' })

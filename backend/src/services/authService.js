@@ -3,6 +3,7 @@ import { prisma } from '../config/prisma.js';
 import { ApiError } from '../utils/errors.js';
 import { normalizePhone } from '../utils/phone.js';
 import { requestOtp, verifyOtp } from './otpService.js';
+import { verifyWidgetToken } from './msg91Widget.js';
 import { issueTokens, signAccessToken, verifyRefreshToken } from './tokenService.js';
 
 /**
@@ -53,10 +54,13 @@ export async function startPhoneLogin(rawPhone) {
  * proves the number reaches them; it does not prove they are free to donate this week, so
  * turning availability back on is the donor's own explicit act.
  */
-export async function completePhoneLogin({ phone: rawPhone, code, role }) {
-  const phone = normalizePhone(rawPhone);
-
-  const existing = await prisma.user.findUnique({ where: { phone } });
+/**
+ * Refuses a sign-in that must not proceed, whatever proved the number.
+ *
+ * Split out so it can run *before* a code is spent on the OTP path — a staff member typing
+ * their number into the app should not burn an SMS to be told they are in the wrong place.
+ */
+async function assertPhoneMayLogIn(existing) {
   if (existing?.status === 'BLOCKED') {
     throw ApiError.forbidden('ACCOUNT_BLOCKED', 'This account is blocked. Contact Red Express support.');
   }
@@ -66,8 +70,23 @@ export async function completePhoneLogin({ phone: rawPhone, code, role }) {
       'Staff accounts sign in with email and password on the Red Express dashboard.',
     );
   }
+}
 
-  await verifyOtp(phone, code);
+/**
+ * Everything that happens once a number is proven — the account, the revival, the tokens.
+ *
+ * Shared by both routes in, and deliberately unaware of which one it was: whether the code was
+ * checked here against `OtpCode` or by MSG91's widget changes nothing about who this person is
+ * or what happens to a donor staff had marked unreachable.
+ *
+ * @param {string} phone  already normalised, and already proven
+ */
+async function finishPhoneLogin({ phone, role }) {
+  const existing = await prisma.user.findUnique({ where: { phone } });
+
+  // Re-checked rather than assumed: on the widget path this is the first look at the account,
+  // because the number is not known until MSG91 hands it back.
+  await assertPhoneMayLogIn(existing);
 
   const revived = existing?.status === 'DEAD';
 
@@ -89,6 +108,47 @@ export async function completePhoneLogin({ phone: rawPhone, code, role }) {
     // Lets the app route straight to the registration form instead of a half-empty home.
     profileComplete: Boolean(user.name) && (user.role !== 'DONOR' || Boolean(profile)),
   };
+}
+
+/**
+ * Sign-in with a code this server generated and checks itself.
+ *
+ * The account lookup happens twice — once here to reject staff and blocked numbers before an
+ * OTP is spent, once inside finishPhoneLogin. That is a cheap query traded for not burning a
+ * code, and an SMS costs real money.
+ */
+export async function completePhoneLogin({ phone: rawPhone, code, role }) {
+  const phone = normalizePhone(rawPhone);
+
+  await assertPhoneMayLogIn(await prisma.user.findUnique({ where: { phone } }));
+  await verifyOtp(phone, code);
+
+  return finishPhoneLogin({ phone, role });
+}
+
+/**
+ * Sign-in with an MSG91 OTP-widget token.
+ *
+ * The number is whatever MSG91 says the token belongs to — never one the client supplied
+ * alongside it. Accepting a client-supplied number would let anyone verify their own phone and
+ * then present that token with a donor's number to be signed in as them. See
+ * services/msg91Widget.js.
+ */
+export async function completeWidgetLogin({ accessToken, role }) {
+  let verifiedPhone;
+  try {
+    verifiedPhone = await verifyWidgetToken(accessToken);
+  } catch (error) {
+    // Deliberately not echoing MSG91's text to the caller: it is written for developers and
+    // sometimes names internal reasons. The log keeps the detail for us.
+    console.warn('[auth] widget token rejected:', error.message);
+    throw ApiError.unauthorized(
+      'OTP_VERIFICATION_FAILED',
+      'We could not confirm that code. Please request a new one.',
+    );
+  }
+
+  return finishPhoneLogin({ phone: normalizePhone(verifiedPhone), role });
 }
 
 export async function staffLogin({ email, password }) {
