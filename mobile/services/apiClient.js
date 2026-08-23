@@ -1,4 +1,5 @@
 import { config } from './config';
+import { logger } from './logger';
 import { clearSession, getAccessToken, getRefreshToken, saveSession } from './tokenStorage';
 import { SESSION_END_REASONS, emitSessionEnded } from './sessionEvents';
 
@@ -193,6 +194,11 @@ export async function request(path, options = {}) {
     if (error?.name === 'AbortError') {
       throw networkError('TIMEOUT', 'The server took too long to respond. Please try again.');
     }
+    // The user-facing copy stays generic on purpose — "the DNS resolver returned SERVFAIL"
+    // helps nobody mid sign-up. But collapsing every cause into one message with no trace of
+    // the original error means every network failure looks identical from here on, which is
+    // exactly the situation this line exists to end. logger.warn is a no-op outside __DEV__.
+    logger.warn(`[api] ${rest.method ?? 'GET'} ${path} threw before a response arrived:`, error);
     throw networkError('NETWORK_ERROR', 'Cannot reach Red Express. Check your connection and try again.');
   }
 
