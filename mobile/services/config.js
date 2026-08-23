@@ -37,6 +37,13 @@ export const config = {
   // Needed by expo-notifications to mint a push token (Phase 10).
   projectId: process.env.EXPO_PUBLIC_PROJECT_ID || null,
 
+  // MSG91's OTP widget. Both values are public by design — they identify the widget to
+  // MSG91's API and are visible in any client that uses it. The auth key that can *spend*
+  // money stays on the server and is never here. Unset means the app falls back to the
+  // backend's own OTP endpoints (services/otpWidget.js).
+  msg91WidgetId: process.env.EXPO_PUBLIC_MSG91_WIDGET_ID || null,
+  msg91TokenAuth: process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH || null,
+
   // Shown on the privacy screen and behind the registration form's terms checkbox. Null
   // rather than a placeholder URL when unset: the privacy screen says the document is not in
   // this build and offers the support address, which is honest, where a dead link is not.

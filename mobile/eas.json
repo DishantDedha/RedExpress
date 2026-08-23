@@ -21,7 +21,9 @@
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://redexpress-api.onrender.com",
         "EXPO_PUBLIC_SUPPORT_EMAIL": "dishantdedha@gmail.com",
-        "EXPO_PUBLIC_ENABLE_VOICE_INPUT": "false"
+        "EXPO_PUBLIC_ENABLE_VOICE_INPUT": "false",
+        "EXPO_PUBLIC_MSG91_WIDGET_ID": "366876676642313737363231",
+        "EXPO_PUBLIC_MSG91_TOKEN_AUTH": "562933T6qnc74yDS736a8a905eP1"
       }
     },
     "production": {

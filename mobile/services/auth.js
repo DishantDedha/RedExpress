@@ -1,5 +1,10 @@
 import { api } from './apiClient';
 import { getCachedUser, saveSession } from './tokenStorage';
+import {
+  sendOtp as sendWidgetOtp,
+  verifyOtp as verifyWidgetOtp,
+  widgetAvailable,
+} from './otpWidget';
 
 /**
  * The auth calls, in one place.
@@ -23,8 +28,15 @@ import { getCachedUser, saveSession } from './tokenStorage';
  * @returns {Promise<{ phone, maskedPhone, expiresAt, expiresInSeconds, message, devCode? }>}
  *          `devCode` is only present when SMS_PROVIDER=console on a non-production backend.
  */
-export function requestOtp(phone) {
-  return api.post('/auth/otp/request', { phone }, { auth: false });
+export async function requestOtp(phone) {
+  if (!widgetAvailable()) {
+    return api.post('/auth/otp/request', { phone }, { auth: false });
+  }
+
+  // The number is already normalised by the caller, and MSG91 has no opinion to return about
+  // it, so it is echoed back unchanged — the screens rely on this field either way.
+  const { expiresInSeconds } = await sendWidgetOtp(phone);
+  return { phone, expiresInSeconds };
 }
 
 /**
@@ -37,7 +49,19 @@ export function requestOtp(phone) {
  * @returns the backend payload plus `next`, the route to land on.
  */
 export async function verifyOtp({ phone, code, role = 'DONOR', mode = 'login' }) {
-  const result = await api.post('/auth/otp/verify', { phone, code, role }, { auth: false });
+  // Two ways in, one result. On the widget path MSG91 checks the code and the backend trades
+  // the resulting token for a session; on the fallback path the backend checks the code
+  // itself. Both endpoints return the same payload, so nothing below this line differs — and
+  // neither does anything in the screens that call it.
+  const result = widgetAvailable()
+    ? await api.post(
+        '/auth/otp/widget-verify',
+        // No phone number: the backend reads it from MSG91's verification of the token, and
+        // would ignore one sent here. See backend/src/services/msg91Widget.js.
+        { accessToken: await verifyWidgetOtp(phone, code), role },
+        { auth: false },
+      )
+    : await api.post('/auth/otp/verify', { phone, code, role }, { auth: false });
 
   await saveSession({
     accessToken: result.accessToken,

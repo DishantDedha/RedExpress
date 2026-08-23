@@ -12,6 +12,7 @@
     "verify:contrast": "node scripts/check-contrast.mjs"
   },
   "dependencies": {
+    "@msg91comm/sendotp-react-native": "^2.1.0",
     "expo": "^57.0.10",
     "expo-constants": "~57.0.9",
     "expo-device": "~57.0.1",
