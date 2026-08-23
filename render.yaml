@@ -57,8 +57,23 @@ services:
       - key: STORAGE_DRIVER
         value: local
 
+      # Turns a typed address into coordinates, and only ever runs when the device did not
+      # supply any — see services/locationService.js. Nominatim is OpenStreetMap's: free, no
+      # key, no billing account. Its usage policy requires a User-Agent that identifies the
+      # caller with a contact address, and requests without one are refused.
+      #
+      # A failed lookup is not a failed registration. resolveCoordinates returns no
+      # coordinates and the record is matched on district and state instead, which is coarser
+      # but works — so the cost of Nominatim being slow, wrong or down is precision, never a
+      # user who cannot sign up.
+      #
+      # Accuracy in rural Odisha is noticeably worse than Google's. Switch to
+      # GEOCODER_PROVIDER=google with a GEOCODER_API_KEY when that starts to matter; the
+      # provider is already implemented and needs no code change.
       - key: GEOCODER_PROVIDER
-        value: none
+        value: nominatim
+      - key: GEOCODER_USER_AGENT
+        value: RedExpress/0.1 (dishantdedha@gmail.com)
 
       # Until DLT registration clears. `console` sends nothing, which is why OTP_MASTER_CODE
       # exists — and why the API refuses to boot if a master code is still set once
