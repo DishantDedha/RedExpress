@@ -70,12 +70,9 @@ export const config = {
    */
   otpLength: Number(process.env.EXPO_PUBLIC_OTP_LENGTH) || 6,
 
-  // Shown on the privacy screen and behind the registration form's terms checkbox. Null
-  // rather than a placeholder URL when unset: the privacy screen says the document is not in
-  // this build and offers the support address, which is honest, where a dead link is not.
+  // Shown on the privacy screen for data deletion requests. The privacy policy and terms of
+  // use themselves are native screens (app/privacy.js, app/terms.js) — not a URL to fetch.
   supportEmail: process.env.EXPO_PUBLIC_SUPPORT_EMAIL || 'support@redexpress.local',
-  privacyPolicyUrl: process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL || null,
-  termsUrl: process.env.EXPO_PUBLIC_TERMS_URL || null,
 
   // Phase 11's voice-input experiment. Off unless explicitly enabled, because it needs a
   // dev build and does not run in Expo Go.

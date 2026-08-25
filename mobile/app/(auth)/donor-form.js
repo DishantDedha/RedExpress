@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   AppButton,
@@ -20,7 +20,6 @@ import {
 import { BLOOD_GROUP_OPTIONS, GENDER_OPTIONS } from '../../data/bloodGroups';
 import { OTHER_CITY, STATES, citiesOf, districtsOf } from '../../data/locations';
 import { getStoredUser } from '../../services/auth';
-import { config } from '../../services/config';
 import { registerDonor } from '../../services/profile';
 import { hapticSuccess } from '../../services/feedback';
 import { formatPhoneForDisplay } from '../../utils/phone';
@@ -557,15 +556,17 @@ export default function DonorFormScreen() {
         <View style={styles.policyLinks}>
           <PolicyLink
             title="Read the privacy policy"
-            url={config.privacyPolicyUrl}
+            path="/privacy"
             label="privacy policy"
             say={say}
+            router={router}
           />
           <PolicyLink
             title="Read the terms and conditions"
-            url={config.termsUrl}
+            path="/terms"
             label="terms and conditions"
             say={say}
+            router={router}
           />
         </View>
       </Card>
@@ -588,32 +589,26 @@ export default function DonorFormScreen() {
 }
 
 /**
- * A link to one of the consent documents.
+ * A link to one of the consent documents, read in the app.
  *
  * Renders as a real button with a role and a hint rather than underlined text inside a
  * sentence — inline links are a known screen-reader trap on React Native, where they are read
  * as part of the surrounding paragraph and are not reachable as their own stop.
  *
- * When the URL is missing from the build it still renders, and says so on press. A silently
- * dead button is worse than an honest one: a blind user has no way to tell the difference
- * between "nothing happened" and "I missed the target".
+ * Pushes onto the same navigation stack rather than opening a browser: the form underneath
+ * stays mounted with everything typed so far, so the back button returns to it exactly as it
+ * was left.
  */
-function PolicyLink({ title, url, label, say }) {
+function PolicyLink({ title, path, label, say, router }) {
   return (
     <AppButton
       title={title}
       variant="link"
       onPress={() => {
-        if (!url) {
-          say(`The ${label} is not available in this build. Email ${config.supportEmail} for a copy.`);
-          return;
-        }
-        say(`Opening the ${label} in your browser.`);
-        Linking.openURL(url).catch(() =>
-          say(`Could not open the ${label}. Email ${config.supportEmail} for a copy.`),
-        );
+        say(`Opening the ${label}.`);
+        router.push(path);
       }}
-      accessibilityHint={`Opens the ${label} in your browser. You can come back to this form afterwards.`}
+      accessibilityHint={`Opens the ${label}. You can come back to this form afterwards.`}
     />
   );
 }

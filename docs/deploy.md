@@ -197,7 +197,6 @@ who installs it.** No secret ever goes here.
 |---|---|
 | `EXPO_PUBLIC_API_BASE_URL` | The public HTTPS API URL. `localhost` means the phone itself. |
 | `EXPO_PUBLIC_PROJECT_ID` | From `app.json` / EAS. Without it no push token can be minted. |
-| `EXPO_PUBLIC_PRIVACY_POLICY_URL`, `EXPO_PUBLIC_TERMS_URL` | Linked from the privacy screen and the registration consent checkbox. Leave blank and the app says the document is not in this build rather than opening a 404. |
 | `EXPO_PUBLIC_SUPPORT_EMAIL` | The address on the privacy screen for data deletion requests. |
 | `EXPO_PUBLIC_ENABLE_VOICE_INPUT` | `false` unless the dev build includes the voice plugin. |
 

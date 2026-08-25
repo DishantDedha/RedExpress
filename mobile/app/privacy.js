@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   AppButton,
   AppText,
@@ -9,11 +9,11 @@ import {
   Screen,
   ScreenHeader,
   useAnnounce,
-} from '../../components';
-import { getLocationPermissionStatus } from '../../services/location';
-import { getPushPermissionStatus } from '../../services/push';
-import { config } from '../../services/config';
-import { colors, spacing } from '../../theme';
+} from '../components';
+import { getLocationPermissionStatus } from '../services/location';
+import { getPushPermissionStatus } from '../services/push';
+import { config } from '../services/config';
+import { colors, spacing } from '../theme';
 
 /**
  * Privacy, consent, and the two permissions this app asks for.
@@ -27,7 +27,13 @@ import { colors, spacing } from '../../theme';
  * reader's place, and is unreadable to the exact user this app was built for.
  *
  * So the substance is here, as ordinary app text a screen reader can move through heading by
- * heading, and the formal policy is linked for anyone who wants it.
+ * heading — including the terms of use, one tap away, which is native for the same reason.
+ *
+ * ## Why this lives at the root of the route tree
+ *
+ * `(app)`'s layout redirects anyone without a session to `/login`. This screen is also linked
+ * from the donor and receiver registration forms, before an account exists — so it sits
+ * alongside `demo.js` at the root, outside that guard, reachable either way.
  *
  * ## Why the permission states are shown here
  *
@@ -40,6 +46,7 @@ import { colors, spacing } from '../../theme';
  * the background.
  */
 export default function PrivacyScreen() {
+  const router = useRouter();
   const say = useAnnounce();
   const [permissions, setPermissions] = useState(null);
   const [note, setNote] = useState(null);
@@ -59,19 +66,6 @@ export default function PrivacyScreen() {
       };
     }, []),
   );
-
-  function openLink(url, label) {
-    if (!url) {
-      // Honest rather than a dead button: the URL is a build-time setting and a build that
-      // shipped without it should say so, not fail silently under a finger.
-      setNote(`The ${label} is not available in this build. Email ${config.supportEmail} for a copy.`);
-      return;
-    }
-    say(`Opening the ${label} in your browser.`);
-    Linking.openURL(url).catch(() => {
-      setNote(`Could not open the ${label}. Email ${config.supportEmail} for a copy.`);
-    });
-  }
 
   return (
     <Screen>
@@ -128,6 +122,20 @@ export default function PrivacyScreen() {
         />
       </Card>
 
+      {/* --- Where it's held ------------------------------------------------- */}
+
+      <Card title="Behind the scenes">
+        <Item
+          label="A few specialist services help us run the app"
+          detail="A text message provider sends the one-time code when you sign in, a notification service delivers alerts to your phone, and our hosting provider stores your account securely. None of them may use your details for anything of their own."
+        />
+        <Item
+          label="Kept while your account is active"
+          detail="We keep your profile, past requests and call history so matching keeps working correctly, until you ask us to delete your account — see below."
+          last
+        />
+      </Card>
+
       {/* --- Control -------------------------------------------------------- */}
 
       <Card title="What you control">
@@ -144,12 +152,12 @@ export default function PrivacyScreen() {
         <AppButton
           title="Email us about your data"
           variant="secondary"
-          onPress={() =>
-            openLink(
+          onPress={() => {
+            say('Opening your email app.');
+            Linking.openURL(
               `mailto:${config.supportEmail}?subject=${encodeURIComponent('My Red Express data')}`,
-              'email app',
-            )
-          }
+            ).catch(() => setNote(`Could not open your email app. Email ${config.supportEmail} for a copy.`));
+          }}
           accessibilityHint={`Opens your email app with a message to ${config.supportEmail}`}
           style={styles.action}
         />
@@ -194,27 +202,19 @@ export default function PrivacyScreen() {
         )}
       </Card>
 
-      {/* --- The formal documents ------------------------------------------- */}
+      {/* --- The other document ------------------------------------------- */}
 
-      <Card title="The full policy">
+      <Card title="Terms of use">
         <AppText variant="body" color={colors.text} style={styles.body}>
-          Everything above is the short version, and it is accurate. The full privacy policy
-          and terms of use say the same things in legal language.
+          This page is the privacy policy. The terms of use cover the rules for using Red
+          Express — including that it is completely free and is not a medical service.
         </AppText>
-
-        <AppButton
-          title="Read the privacy policy"
-          variant="secondary"
-          onPress={() => openLink(config.privacyPolicyUrl, 'privacy policy')}
-          accessibilityHint="Opens the full privacy policy in your browser"
-          style={styles.action}
-        />
 
         <AppButton
           title="Read the terms of use"
           variant="secondary"
-          onPress={() => openLink(config.termsUrl, 'terms of use')}
-          accessibilityHint="Opens the terms of use in your browser"
+          onPress={() => router.push('/terms')}
+          accessibilityHint="Opens the terms of use"
         />
       </Card>
     </Screen>

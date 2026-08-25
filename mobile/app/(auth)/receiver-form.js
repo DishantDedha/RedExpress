@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   AppButton,
+  AppCheckbox,
   AppSelect,
   AppText,
   AppTextInput,
@@ -50,6 +51,7 @@ export default function ReceiverFormScreen() {
     otherCity: '',
     password: '',
     confirmPassword: '',
+    terms: false,
   });
   const [coords, setCoords] = useState(null);
   const [phone, setPhone] = useState(params.phone ? String(params.phone) : '');
@@ -73,6 +75,7 @@ export default function ReceiverFormScreen() {
     otherCity: useRef(null),
     password: useRef(null),
     confirmPassword: useRef(null),
+    terms: useRef(null),
   };
 
   const districts = useMemo(() => districtsOf(values.state), [values.state]);
@@ -87,6 +90,7 @@ export default function ReceiverFormScreen() {
     otherCity: 'City or town name',
     password: 'Password',
     confirmPassword: 'Confirm password',
+    terms: 'Terms and conditions',
   };
 
   function set(field, value) {
@@ -122,6 +126,7 @@ export default function ReceiverFormScreen() {
           return values.password === values.confirmPassword ? null : 'Passwords do not match.';
         },
       ],
+      ['terms', () => (values.terms ? null : 'You must agree to the terms and conditions to register.')],
     ]);
 
     if (Object.keys(found).length) {
@@ -339,8 +344,52 @@ export default function ReceiverFormScreen() {
           textContentType="newPassword"
           autoCapitalize="none"
         />
+
+        <AppCheckbox
+          ref={refs.terms}
+          label="I agree to the terms and conditions and the privacy policy"
+          checked={values.terms}
+          onChange={(checked) => set('terms', checked)}
+          error={errors.terms}
+          helperText="Your details are used to match your request with donors near you."
+        />
+
+        {/* Consent to something you cannot read is not consent. These sit under the box
+            rather than inside its label so the checkbox stays one clean tap target with one
+            spoken state, and reading a document is a separate, obvious action. */}
+        <View style={styles.policyLinks}>
+          <PolicyLink title="Read the privacy policy" path="/privacy" label="privacy policy" say={say} router={router} />
+          <PolicyLink
+            title="Read the terms and conditions"
+            path="/terms"
+            label="terms and conditions"
+            say={say}
+            router={router}
+          />
+        </View>
       </Card>
     </Screen>
+  );
+}
+
+/**
+ * A link to one of the consent documents, read in the app.
+ *
+ * Pushes onto the same navigation stack rather than opening a browser: the form underneath
+ * stays mounted with everything typed so far, so the back button returns to it exactly as it
+ * was left.
+ */
+function PolicyLink({ title, path, label, say, router }) {
+  return (
+    <AppButton
+      title={title}
+      variant="link"
+      onPress={() => {
+        say(`Opening the ${label}.`);
+        router.push(path);
+      }}
+      accessibilityHint={`Opens the ${label}. You can come back to this form afterwards.`}
+    />
   );
 }
 
@@ -348,4 +397,5 @@ const styles = StyleSheet.create({
   readOnly: { marginBottom: spacing.lg, gap: spacing.xs },
   readOnlyValue: { marginTop: spacing.xs },
   sectionNote: { marginBottom: spacing.lg },
+  policyLinks: { marginTop: spacing.md, gap: spacing.xs },
 });
