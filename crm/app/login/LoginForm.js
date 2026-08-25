@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import Field from '@/components/ui/Field';
 import { CSRF_COOKIE, CSRF_HEADER } from '@/lib/session-cookies';
@@ -159,6 +160,13 @@ export default function LoginForm({ reason, next }) {
         onChange={(event) => setPassword(event.target.value)}
         error={fieldErrors.password}
       />
+
+      <Link
+        href="/forgot-password"
+        className="self-start text-sm font-semibold text-brand underline underline-offset-4 hover:text-brand-pressed"
+      >
+        Forgot password?
+      </Link>
 
       <Button type="submit" size="lg" busy={busy} busyLabel="Signing in…" className="w-full">
         Sign in

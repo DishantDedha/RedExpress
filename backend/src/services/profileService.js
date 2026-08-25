@@ -54,7 +54,9 @@ export function donorProfileView(profile) {
     dateOfBirth: profile.dateOfBirth,
     age: profile.dateOfBirth ? ageInYears(profile.dateOfBirth) : null,
     lastDonationDate: profile.lastDonationDate,
-    isAvailable: profile.isAvailable,
+    availabilityStatus: profile.availabilityStatus,
+    weight: profile.weight,
+    emergencyContact: profile.emergencyContact,
     state: profile.state,
     district: profile.district,
     city: profile.city,
@@ -205,6 +207,8 @@ export async function registerDonor(user, input, file) {
           bloodGroup: input.bloodGroup,
           gender: input.gender,
           dateOfBirth: input.dateOfBirth ?? null,
+          weight: input.weight,
+          emergencyContact: input.emergencyContact ?? null,
           state: input.state,
           district: input.district,
           city: input.city,
@@ -255,7 +259,18 @@ export async function updateDonorProfile(user, input, file) {
   if (passwordHash) userData.passwordHash = passwordHash;
 
   const profileData = {};
-  for (const field of ['bloodGroup', 'gender', 'state', 'district', 'city', 'pincode', 'address', 'isAvailable']) {
+  for (const field of [
+    'bloodGroup',
+    'gender',
+    'state',
+    'district',
+    'city',
+    'pincode',
+    'address',
+    'availabilityStatus',
+    'weight',
+    'emergencyContact',
+  ]) {
     if (input[field] !== undefined) profileData[field] = input[field];
   }
   if (input.dateOfBirth !== undefined) profileData.dateOfBirth = input.dateOfBirth;
@@ -306,9 +321,18 @@ export async function updateDonorProfile(user, input, file) {
   }
 }
 
-export async function setDonorAvailability(user, isAvailable) {
+const AVAILABILITY_MESSAGES = {
+  AVAILABLE: 'You are now shown as available to donate.',
+  BUSY: 'You are now shown as busy. You will not appear in searches or get alerts until you change this.',
+  RECENTLY_DONATED:
+    'You are now shown as recently donated. You will not appear in searches or get alerts until you change this.',
+  TEMPORARILY_UNAVAILABLE:
+    'You are now shown as temporarily unavailable. You will not appear in searches or get alerts until you change this.',
+};
+
+export async function setAvailabilityStatus(user, availabilityStatus) {
   const profile = await prisma.donorProfile
-    .update({ where: { userId: user.id }, data: { isAvailable } })
+    .update({ where: { userId: user.id }, data: { availabilityStatus } })
     .catch((err) => {
       if (err?.code === 'P2025') {
         throw ApiError.notFound('PROFILE_NOT_FOUND', 'You have not registered as a donor yet.');
@@ -318,9 +342,7 @@ export async function setDonorAvailability(user, isAvailable) {
 
   return profilePayload(user, profile, {
     // Plain sentence rather than a status flag: the mobile screen announces this verbatim.
-    message: isAvailable
-      ? 'You are now shown as available to donate.'
-      : 'You are now shown as not available to donate.',
+    message: AVAILABILITY_MESSAGES[availabilityStatus] ?? AVAILABILITY_MESSAGES.AVAILABLE,
   });
 }
 

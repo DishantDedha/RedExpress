@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  availabilityStatus,
   bloodGroup,
   boolish,
   dateOfBirth,
@@ -12,6 +13,7 @@ import {
   password,
   pincode,
   requiredText,
+  weight,
 } from './common.js';
 
 /**
@@ -49,6 +51,8 @@ const donorRegisterFields = {
   bloodGroup,
   gender,
   dateOfBirth: dateOfBirth.optional(),
+  weight,
+  emergencyContact: optionalText('an emergency contact number', { min: 8, max: 20 }),
 
   state: requiredText('your state', { max: 80 }),
   district: requiredText('your district', { max: 80 }),
@@ -84,6 +88,8 @@ export const donorUpdateSchema = requireMatchingConfirmation(
         bloodGroup: bloodGroup.optional(),
         gender: gender.optional(),
         dateOfBirth: dateOfBirth.optional(),
+        weight: weight.optional(),
+        emergencyContact: optionalText('an emergency contact number', { min: 8, max: 20 }),
         state: donorRegisterFields.state.optional(),
         district: donorRegisterFields.district.optional(),
         city: donorRegisterFields.city.optional(),
@@ -91,7 +97,7 @@ export const donorUpdateSchema = requireMatchingConfirmation(
         address: donorRegisterFields.address.optional(),
         latitude: latitude.optional(),
         longitude: longitude.optional(),
-        isAvailable: boolish().optional(),
+        availabilityStatus: availabilityStatus.optional(),
         password: password.optional(),
         confirmPassword: z.string().optional(),
         /// Send true to delete the current photo without uploading a replacement.
@@ -101,7 +107,7 @@ export const donorUpdateSchema = requireMatchingConfirmation(
 );
 
 export const availabilitySchema = z.object({
-  isAvailable: boolish('Choose whether you are available to donate.'),
+  availabilityStatus,
 });
 
 export const lastDonationSchema = z.object({

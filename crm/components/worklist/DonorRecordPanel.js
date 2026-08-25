@@ -37,7 +37,9 @@ export default function DonorRecordPanel({ user, initialCalls, canBeMarked }) {
       <div className="flex flex-wrap items-center gap-3">
         <StatusBadge status={status} showHint />
         {user.role === 'DONOR' ? (
-          <AvailabilityBadge isAvailable={status === 'DEAD' ? false : user.isAvailable} />
+          <AvailabilityBadge
+            availabilityStatus={status === 'DEAD' ? 'TEMPORARILY_UNAVAILABLE' : user.availabilityStatus}
+          />
         ) : null}
         {user.isPhoneVerified ? (
           <Badge tone="success">Phone verified</Badge>

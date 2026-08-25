@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { bloodGroup, optionalText } from './common.js';
+import { bloodGroup, email, gender, optionalText, pincode, requiredText, weight } from './common.js';
 import { pagination } from './searchSchemas.js';
 import { MANUAL_CALL_OUTCOMES } from '../services/callLogService.js';
 
@@ -57,6 +57,33 @@ export const markDeadSchema = z.object({
 });
 
 export const reactivateSchema = z.object({
+  note: auditNote,
+});
+
+/** Editing a person's record from the CRM. Every field optional — a PATCH sends what changed. */
+export const updateUserSchema = z
+  .object({
+    fullName: requiredText('a full name', { min: 2, max: 80 }).optional(),
+    email: email.optional(),
+    // Donor-profile fields — ignored server-side for a person with no DonorProfile.
+    bloodGroup: bloodGroup.optional(),
+    gender: gender.optional(),
+    state: optionalText('a state', { max: 80 }),
+    district: optionalText('a district', { max: 80 }),
+    city: optionalText('a city', { max: 80 }),
+    pincode: pincode.optional(),
+    address: optionalText('an address', { min: 5, max: 500 }),
+    weight: weight.optional(),
+    emergencyContact: optionalText('an emergency contact number', { min: 8, max: 20 }),
+  })
+  .refine((data) => Object.keys(data).length > 0, { message: 'Change at least one field.' });
+
+export const setUserStatusSchema = z.object({
+  status: z.enum(['ACTIVE', 'BLOCKED'], { errorMap: () => ({ message: 'Choose active or blocked.' }) }),
+  note: auditNote,
+});
+
+export const deleteUserSchema = z.object({
   note: auditNote,
 });
 

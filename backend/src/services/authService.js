@@ -1,10 +1,13 @@
+import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../config/prisma.js';
+import { env } from '../config/env.js';
 import { ApiError } from '../utils/errors.js';
 import { normalizePhone } from '../utils/phone.js';
 import { requestOtp, verifyOtp } from './otpService.js';
 import { verifyWidgetToken } from './msg91Widget.js';
 import { issueTokens, signAccessToken, verifyRefreshToken } from './tokenService.js';
+import { sendEmail } from './emailService.js';
 
 /**
  * Auth use-cases. Routes/controllers stay thin; the rules live here.
@@ -50,7 +53,7 @@ export async function startPhoneLogin(rawPhone) {
  * bump already happened when staff marked them dead, and bumping again would invalidate
  * the tokens we are about to hand out.
  *
- * `isAvailable` is deliberately NOT restored here — see docs/crm-lifecycle.md. Re-verifying
+ * `availabilityStatus` is deliberately NOT restored here — see docs/crm-lifecycle.md. Re-verifying
  * proves the number reaches them; it does not prove they are free to donate this week, so
  * turning availability back on is the donor's own explicit act.
  */
@@ -168,6 +171,102 @@ export async function staffLogin({ email, password }) {
   }
 
   return { ...issueTokens(user), user: publicUser(user) };
+}
+
+// ---------------------------------------------------------------------------
+// Staff password reset
+// ---------------------------------------------------------------------------
+
+/**
+ * Staff and admin only — donors and receivers sign in by OTP and have no password to lose.
+ * A raw token is emailed; only its SHA-256 hash is stored, the same "never store the secret
+ * itself" rule OtpCode follows for codes.
+ */
+function hashResetToken(rawToken) {
+  return crypto.createHash('sha256').update(rawToken).digest('hex');
+}
+
+function minutesFromNow(minutes) {
+  return new Date(Date.now() + minutes * 60_000);
+}
+
+/**
+ * Starts a reset. Always resolves the same way whether or not the email belongs to a staff
+ * account — a different response would let anyone probe which emails have dashboard access.
+ */
+export async function requestPasswordReset(rawEmail) {
+  const email = rawEmail.toLowerCase();
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  const eligible = user && (user.role === 'STAFF' || user.role === 'ADMIN') && user.status === 'ACTIVE';
+
+  if (eligible) {
+    const rawToken = crypto.randomBytes(32).toString('base64url');
+    const tokenHash = hashResetToken(rawToken);
+    const expiresAt = minutesFromNow(env.passwordReset.expiryMinutes);
+
+    // Retire any still-live token for this account first, so an old email link cannot be
+    // used once a newer one has been requested.
+    await prisma.$transaction([
+      prisma.passwordResetToken.updateMany({
+        where: { userId: user.id, usedAt: null },
+        data: { usedAt: new Date() },
+      }),
+      prisma.passwordResetToken.create({ data: { userId: user.id, tokenHash, expiresAt } }),
+    ]);
+
+    const link = `${env.crm.baseUrl}/reset-password?token=${rawToken}`;
+
+    await sendEmail({
+      to: user.email,
+      subject: 'Reset your Red Express dashboard password',
+      text: [
+        `Hello ${user.name || 'there'},`,
+        '',
+        'Someone requested a password reset for your Red Express staff dashboard account.',
+        `If this was you, set a new password here: ${link}`,
+        '',
+        `This link expires in ${env.passwordReset.expiryMinutes} minutes and can only be used once.`,
+        'If you did not request this, you can ignore this email — your password has not changed.',
+      ].join('\n'),
+    }).catch((err) => {
+      // Do not let a mail-provider outage turn into "which emails are staff" via a 502 vs
+      // 200 split. Logged for us; the caller still gets the same generic success.
+      console.error('[auth] password reset email failed:', err.message);
+    });
+  }
+
+  return {
+    message: 'If that email address has a Red Express dashboard account, a reset link is on its way.',
+  };
+}
+
+/** Completes a reset: verifies the token, sets the new password, ends every existing session. */
+export async function resetPassword({ token, password }) {
+  const tokenHash = hashResetToken(token);
+
+  const record = await prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+  if (!record || record.usedAt || record.expiresAt <= new Date()) {
+    throw ApiError.badRequest(
+      'RESET_TOKEN_INVALID',
+      'That reset link is invalid or has expired. Request a new one.',
+    );
+  }
+
+  const passwordHash = await bcrypt.hash(password, env.bcryptRounds);
+
+  const user = await prisma.$transaction(async (tx) => {
+    const updated = await tx.user.update({
+      where: { id: record.userId },
+      // tokenVersion bumps so a password reset also ends every session the account
+      // currently holds — the same reasoning as marking a donor unreachable.
+      data: { passwordHash, tokenVersion: { increment: 1 } },
+    });
+    await tx.passwordResetToken.update({ where: { id: record.id }, data: { usedAt: new Date() } });
+    return updated;
+  });
+
+  return { ...issueTokens(user), user: publicUser(user), message: 'Your password has been changed. You are signed in.' };
 }
 
 /**

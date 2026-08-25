@@ -53,6 +53,8 @@ export async function registerDonor(values) {
     'bloodGroup',
     'gender',
     'dateOfBirth',
+    'weight',
+    'emergencyContact',
     'state',
     'district',
     'city',
@@ -117,14 +119,14 @@ export async function updateDonorProfile(changes) {
 }
 
 /**
- * The availability toggle.
+ * The availability selector — one of the four AvailabilityStatus values.
  *
  * The response carries a `message` written as a full sentence — "You are now shown as
  * available to donate." — which the profile screen announces verbatim. The consequence is
- * what matters to the user, not the boolean.
+ * what matters to the user, not the enum value.
  */
-export function setAvailability(isAvailable) {
-  return api.patch('/donors/me/availability', { isAvailable });
+export function setAvailabilityStatus(availabilityStatus) {
+  return api.patch('/donors/me/availability', { availabilityStatus });
 }
 
 /** `date` is `YYYY-MM-DD`, or null to clear it — "I have never donated" is a real answer. */

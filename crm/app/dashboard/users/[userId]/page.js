@@ -9,6 +9,7 @@ import PhoneLink from '@/components/ui/PhoneLink';
 import LocationPanel from '@/components/ui/LocationPanel';
 import Badge, { RequestStatusBadge, UrgencyBadge } from '@/components/ui/Badge';
 import DonorRecordPanel from '@/components/worklist/DonorRecordPanel';
+import AdminActions from '@/components/AdminActions';
 import { apiGet } from '@/lib/session';
 import { BackendError } from '@/lib/api';
 import { AUDIT_ACTION_LABELS, MATCH_RESPONSES, bloodGroupLabel } from '@/lib/constants';
@@ -58,12 +59,13 @@ export default async function UserDetailPage({ params }) {
       {/* Status, the call controls and the history are one client component: marking someone
           unreachable changes all three at once, and two of them going stale until the next
           navigation is exactly how a donor gets rung twice. */}
-      <div className="mb-6">
+      <div className="mb-6 space-y-4">
         <DonorRecordPanel
           user={user}
           initialCalls={calls}
           canBeMarked={user.role === 'DONOR' || user.role === 'RECEIVER'}
         />
+        <AdminActions user={user} donorProfile={donorProfile} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

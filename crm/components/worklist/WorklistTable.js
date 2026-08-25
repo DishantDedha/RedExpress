@@ -83,7 +83,9 @@ export default function WorklistTable({ requestId, donors, caption, isPreview = 
       cell: (row) => (
         <div className="space-y-1">
           <StatusBadge status={row.status} showHint />
-          <AvailabilityBadge isAvailable={row.status === 'DEAD' ? false : row.donor?.isAvailable} />
+          <AvailabilityBadge
+            availabilityStatus={row.status === 'DEAD' ? 'TEMPORARILY_UNAVAILABLE' : row.donor?.availabilityStatus}
+          />
         </div>
       ),
     },

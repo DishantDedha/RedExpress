@@ -51,6 +51,7 @@ export default function PostRequestScreen() {
 
   const [values, setValues] = useState({
     bloodGroup: null,
+    patientName: '',
     unitsNeeded: '1',
     hospitalName: '',
     contactPhone: '',
@@ -69,6 +70,7 @@ export default function PostRequestScreen() {
 
   const refs = {
     bloodGroup: useRef(null),
+    patientName: useRef(null),
     unitsNeeded: useRef(null),
     hospitalName: useRef(null),
     contactPhone: useRef(null),
@@ -113,6 +115,7 @@ export default function PostRequestScreen() {
 
   const FIELD_LABELS = {
     bloodGroup: 'Blood group needed',
+    patientName: 'Patient name',
     unitsNeeded: 'Units needed',
     hospitalName: 'Hospital name',
     contactPhone: 'Contact number',
@@ -130,6 +133,7 @@ export default function PostRequestScreen() {
 
     const { errors: found, order } = validate([
       ['bloodGroup', () => (values.bloodGroup ? null : 'Choose the blood group needed.')],
+      ['patientName', () => required(values.patientName, 'Enter the patient name.')],
       ['unitsNeeded', () => checkUnits(values.unitsNeeded)],
       ['hospitalName', () => required(values.hospitalName, 'Enter the hospital name.')],
       ['contactPhone', () => (phone.ok ? null : phone.error)],
@@ -157,6 +161,7 @@ export default function PostRequestScreen() {
     try {
       const result = await createRequest({
         bloodGroup: values.bloodGroup,
+        patientName: values.patientName.trim(),
         unitsNeeded: Number(values.unitsNeeded),
         hospitalName: values.hospitalName.trim(),
         contactPhone: phone.phone,
@@ -236,6 +241,16 @@ export default function PostRequestScreen() {
           onChange={(value) => set('bloodGroup', value)}
           error={errors.bloodGroup}
           helperText="We also alert donors whose group can safely donate to this one."
+        />
+
+        <AppTextInput
+          ref={refs.patientName}
+          label="Patient name"
+          required
+          value={values.patientName}
+          onChangeText={(text) => set('patientName', text)}
+          error={errors.patientName}
+          autoCapitalize="words"
         />
 
         <AppTextInput

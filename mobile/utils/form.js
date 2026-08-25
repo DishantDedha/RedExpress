@@ -150,6 +150,16 @@ export function checkDateOfBirth(value, { optional = true } = {}) {
   return null;
 }
 
+/** Kilograms. Bounds match `weight` in the backend's common schema. */
+export function checkWeight(value, { optional = false } = {}) {
+  const text = String(value ?? '').trim();
+  if (!text) return optional ? null : 'Enter your weight in kilograms.';
+  const parsed = Number(text);
+  if (!Number.isFinite(parsed)) return 'Weight must be a number.';
+  if (parsed < 30 || parsed > 300) return 'Weight must be between 30 and 300 kilograms.';
+  return null;
+}
+
 export function checkDonationDate(value) {
   if (!value) return null;
   const parsed = new Date(`${value}T00:00:00Z`);

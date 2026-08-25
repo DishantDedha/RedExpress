@@ -84,6 +84,15 @@ services:
       - key: PUSH_PROVIDER
         value: console
 
+      # Only used for CRM staff password reset — donors and receivers sign in by OTP and
+      # never receive email. "console" logs the reset link instead of sending it, same
+      # convention as SMS_PROVIDER=console.
+      - key: EMAIL_PROVIDER
+        value: console
+      # The CRM's public URL, so a reset email can link straight to /reset-password.
+      - key: CRM_BASE_URL
+        sync: false
+
       # Prompted for on first deploy, then stored by Render. Never committed.
       - key: DATABASE_URL          # Neon connection string
         sync: false

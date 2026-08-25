@@ -6,7 +6,6 @@ import {
   AppButton,
   AppDateInput,
   AppSelect,
-  AppSwitch,
   AppText,
   AppTextInput,
   Card,
@@ -17,11 +16,18 @@ import {
   SectionHeading,
   useAnnounce,
 } from '../../../components';
-import { BLOOD_GROUP_OPTIONS, GENDER_OPTIONS, bloodGroupLabel, genderLabel } from '../../../data/bloodGroups';
+import {
+  AVAILABILITY_STATUS_OPTIONS,
+  BLOOD_GROUP_OPTIONS,
+  GENDER_OPTIONS,
+  availabilityStatusLabel,
+  bloodGroupLabel,
+  genderLabel,
+} from '../../../data/bloodGroups';
 import { OTHER_CITY, STATES, citiesOf, districtsOf } from '../../../data/locations';
 import {
   getDonorProfile,
-  setAvailability,
+  setAvailabilityStatus,
   setLastDonationDate,
   updateDonorProfile,
 } from '../../../services/profile';
@@ -33,6 +39,7 @@ import {
   checkDonationDate,
   checkEmail,
   checkPincode,
+  checkWeight,
   fieldErrorsFrom,
   reportErrors,
   required,
@@ -90,6 +97,8 @@ export default function ProfileScreen() {
     bloodGroup: useRef(null),
     gender: useRef(null),
     dateOfBirth: useRef(null),
+    weight: useRef(null),
+    emergencyContact: useRef(null),
     state: useRef(null),
     district: useRef(null),
     city: useRef(null),
@@ -136,6 +145,8 @@ export default function ProfileScreen() {
     bloodGroup: 'Blood group',
     gender: 'Gender',
     dateOfBirth: 'Date of birth',
+    weight: 'Weight',
+    emergencyContact: 'Emergency contact',
     state: 'State',
     district: 'District',
     city: 'City or town',
@@ -154,6 +165,8 @@ export default function ProfileScreen() {
       bloodGroup: profile.bloodGroup,
       gender: profile.gender,
       dateOfBirth: toDateInput(profile.dateOfBirth),
+      weight: profile.weight != null ? String(profile.weight) : '',
+      emergencyContact: profile.emergencyContact ?? '',
       state: profile.state,
       district: profile.district,
       // A city typed into "Other" at registration is not in the list, so edit mode has to
@@ -193,6 +206,7 @@ export default function ProfileScreen() {
       ['bloodGroup', () => (values.bloodGroup ? null : 'Choose a blood group.')],
       ['gender', () => (values.gender ? null : 'Choose a gender.')],
       ['dateOfBirth', () => checkDateOfBirth(values.dateOfBirth)],
+      ['weight', () => checkWeight(values.weight)],
       ['state', () => required(values.state, 'Choose your state.')],
       ['district', () => required(values.district, 'Choose your district.')],
       ['city', () => (values.city ? null : 'Choose your city or town.')],
@@ -217,6 +231,8 @@ export default function ProfileScreen() {
         bloodGroup: values.bloodGroup,
         gender: values.gender,
         dateOfBirth: values.dateOfBirth ?? undefined,
+        weight: values.weight.trim(),
+        emergencyContact: values.emergencyContact.trim(),
         state: values.state,
         district: values.district,
         city: cityIsOther ? values.otherCity.trim() : values.city,
@@ -255,24 +271,24 @@ export default function ProfileScreen() {
     }
   }
 
-  async function toggleAvailability(next) {
-    if (availabilityBusy) return;
+  async function changeAvailability(next) {
+    if (availabilityBusy || next === profile.availabilityStatus) return;
 
-    // Optimistic, so the switch responds to the tap immediately — but see the rollback below.
-    const previous = profile.isAvailable;
-    setProfile((current) => ({ ...current, isAvailable: next }));
+    // Optimistic, so the selector responds to the tap immediately — but see the rollback below.
+    const previous = profile.availabilityStatus;
+    setProfile((current) => ({ ...current, availabilityStatus: next }));
     setAvailabilityBusy(true);
 
     try {
-      const result = await setAvailability(next);
+      const result = await setAvailabilityStatus(next);
       setProfile(result.donorProfile);
       hapticSuccess();
       // The server's own sentence: "You are now shown as available to donate."
       say(result.message);
     } catch (error) {
-      // Put the control back to what the server still believes. A switch showing a state
+      // Put the control back to what the server still believes. A selector showing a state
       // that was never saved is worse than one that visibly refused.
-      setProfile((current) => ({ ...current, isAvailable: previous }));
+      setProfile((current) => ({ ...current, availabilityStatus: previous }));
       hapticError();
       say(`Could not change your availability. ${error.message}`);
       setStatus({ message: error.message, tone: 'error' });
@@ -388,20 +404,20 @@ export default function ProfileScreen() {
 
       {/* --- Availability -------------------------------------------------- */}
 
-      <Card title="Available to donate">
-        <AppSwitch
-          label="I can donate right now"
-          value={profile.isAvailable}
-          onValueChange={toggleAvailability}
-          loading={availabilityBusy}
-          onText="You are shown as available. Patients near you can find you."
-          offText="You are shown as not available. You will not appear in searches or get alerts."
-          accessibilityHint="Turning this off hides you from donor searches until you turn it back on"
+      <Card title="Availability">
+        <AppSelect
+          label="Your availability"
+          options={AVAILABILITY_STATUS_OPTIONS}
+          value={profile.availabilityStatus}
+          onChange={changeAvailability}
+          disabled={availabilityBusy}
+          helperText="Only Available donors are shown in search and get alerts. Change this any time — it takes effect immediately."
+          accessibilityHint="Changing this saves immediately and controls whether you appear in donor search and get alerts"
         />
 
         <AppText variant="caption" color={colors.textMuted} style={styles.note}>
-          Turn this off when you are unwell, travelling, or have donated recently. It takes
-          effect immediately and you can turn it back on any time.
+          Set this to Busy, Recently donated, or Temporarily unavailable when you cannot give
+          blood right now. Set it back to Available when you can.
         </AppText>
       </Card>
 
@@ -488,6 +504,8 @@ export default function ProfileScreen() {
           <Detail label="Blood group" value={bloodGroupLabel(profile.bloodGroup)} />
           <Detail label="Gender" value={genderLabel(profile.gender)} />
           <Detail label="Date of birth" value={formatDate(profile.dateOfBirth)} />
+          <Detail label="Weight" value={profile.weight != null ? `${profile.weight} kilograms` : null} />
+          <Detail label="Emergency contact" value={profile.emergencyContact} />
           <Detail
             label="Location"
             value={[profile.city, profile.district, profile.state].filter(Boolean).join(', ')}
@@ -676,6 +694,27 @@ function EditForm({
           helperText="Optional."
         />
 
+        <AppTextInput
+          ref={refs.weight}
+          label="Weight (kilograms)"
+          required
+          value={values.weight}
+          onChangeText={(text) => set('weight', text.replace(/[^\d.]/g, ''))}
+          error={errors.weight}
+          keyboardType="decimal-pad"
+          inputMode="decimal"
+        />
+
+        <AppTextInput
+          ref={refs.emergencyContact}
+          label="Emergency contact"
+          value={values.emergencyContact}
+          onChangeText={(text) => set('emergencyContact', text)}
+          error={errors.emergencyContact}
+          keyboardType="phone-pad"
+          inputMode="tel"
+          helperText="Optional. A second number to try if we cannot reach you."
+        />
       </Card>
 
       <Card title="Location">

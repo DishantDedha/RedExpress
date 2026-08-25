@@ -4,7 +4,7 @@ import {
   getMe,
   registerDonor,
   registerReceiver,
-  setDonorAvailability,
+  setAvailabilityStatus,
   setLastDonationDate,
   updateDonorProfile,
 } from '../services/profileService.js';
@@ -29,7 +29,7 @@ export const updateDonorMeHandler = asyncHandler(async (req, res) => {
 });
 
 export const updateAvailabilityHandler = asyncHandler(async (req, res) => {
-  res.status(200).json(await setDonorAvailability(req.user, req.body.isAvailable));
+  res.status(200).json(await setAvailabilityStatus(req.user, req.body.availabilityStatus));
 });
 
 export const updateLastDonationHandler = asyncHandler(async (req, res) => {

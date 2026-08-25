@@ -48,6 +48,12 @@ const NAV_ITEMS = [
     icon: 'drop',
     description: 'Open requests and calling worklists',
   },
+  {
+    href: '/dashboard/reports',
+    label: 'Reports',
+    icon: 'chart',
+    description: 'Donors by district and blood group, registrations, and completed requests',
+  },
 ];
 
 export default function Sidebar() {

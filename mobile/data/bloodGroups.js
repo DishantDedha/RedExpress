@@ -38,3 +38,15 @@ export const GENDER_OPTIONS = [
 export function genderLabel(value) {
   return GENDER_OPTIONS.find((option) => option.value === value)?.label ?? value ?? 'Not set';
 }
+
+/** Mirrors the backend's AvailabilityStatus enum (schema.prisma). */
+export const AVAILABILITY_STATUS_OPTIONS = [
+  { value: 'AVAILABLE', label: 'Available', description: 'Shown in search and get alerts' },
+  { value: 'BUSY', label: 'Busy', description: 'Hidden from search and alerts for now' },
+  { value: 'RECENTLY_DONATED', label: 'Recently donated', description: 'Hidden until you are eligible again' },
+  { value: 'TEMPORARILY_UNAVAILABLE', label: 'Temporarily unavailable', description: 'Hidden from search and alerts for now' },
+];
+
+export function availabilityStatusLabel(value) {
+  return AVAILABILITY_STATUS_OPTIONS.find((option) => option.value === value)?.label ?? value ?? 'Not set';
+}

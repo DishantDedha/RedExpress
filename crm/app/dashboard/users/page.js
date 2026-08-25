@@ -165,7 +165,7 @@ const COLUMNS = [
     cell: (row) => (
       <div className="space-y-1">
         <StatusBadge status={row.status} showHint />
-        {row.role === 'DONOR' ? <AvailabilityBadge isAvailable={row.isAvailable} /> : null}
+        {row.role === 'DONOR' ? <AvailabilityBadge availabilityStatus={row.availabilityStatus} /> : null}
       </div>
     ),
   },

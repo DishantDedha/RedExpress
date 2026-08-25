@@ -279,6 +279,32 @@ export const env = {
       route: process.env.MSG91_ROUTE ?? '4',
     },
   },
+
+  /// Email — used for exactly one thing: CRM staff password reset. Donors and receivers
+  /// sign in by OTP, so they never need it. "console" prints the reset link instead of
+  /// sending it, the same convention as SMS_PROVIDER=console.
+  email: {
+    provider: oneOf('EMAIL_PROVIDER', ['console', 'smtp'], 'console'),
+    from: process.env.EMAIL_FROM ?? 'Red Express <no-reply@redexpress.example>',
+    smtp: {
+      host: process.env.SMTP_HOST ?? '',
+      port: int('SMTP_PORT', 587),
+      secure: bool('SMTP_SECURE', false),
+      user: process.env.SMTP_USER ?? '',
+      pass: process.env.SMTP_PASS ?? '',
+    },
+  },
+
+  /// Where the CRM is hosted, so a password-reset email can link straight to its
+  /// reset-password page. Never guessed from a request header — that would let anyone who
+  /// can reach this API point a reset email at an arbitrary domain.
+  crm: {
+    baseUrl: (process.env.CRM_BASE_URL ?? 'http://localhost:3000').replace(/\/+$/, ''),
+  },
+
+  passwordReset: {
+    expiryMinutes: int('PASSWORD_RESET_EXPIRY_MINUTES', 30),
+  },
 };
 
 /**

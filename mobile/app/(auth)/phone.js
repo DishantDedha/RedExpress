@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -10,6 +10,7 @@ import {
   ScreenHeader,
   useAnnounce,
 } from '../../components';
+import { api } from '../../services/apiClient';
 import { requestOtp } from '../../services/auth';
 import { hapticError } from '../../services/feedback';
 import { SESSION_END_REASONS } from '../../services/sessionEvents';
@@ -59,6 +60,16 @@ export default function PhoneScreen() {
   const [fieldError, setFieldError] = useState(null);
   const [status, setStatus] = useState(null); // { message, tone }
   const [sending, setSending] = useState(false);
+
+  // Render's free tier sleeps the backend after idle. In the widget flow (real builds only —
+  // Expo Go can't load the native module) the OTP send never touches our backend at all, so
+  // nothing wakes it until /otp/widget-verify, by which point the user has already typed
+  // their code and the cold start blows the request timeout. Firing this the moment the
+  // screen mounts gives the backend the whole "read the SMS and type it in" window to wake
+  // up instead. Errors are irrelevant — this exists purely for its side effect.
+  useEffect(() => {
+    api.get('/health', { auth: false }).catch(() => {});
+  }, []);
 
   // A forced sign-out lands here with an explanation attached (see app/_layout.js). Being
   // marked unreachable is recoverable and reads as a warning; a block is not.

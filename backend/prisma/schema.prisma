@@ -71,6 +71,22 @@ enum MatchResponse {
   PENDING
   ACCEPTED
   DECLINED
+  /// "Ask me again later" — the donor can currently neither commit nor rule themselves
+  /// out. Treated like DECLINED for the requester's accepted-count and for silence (no
+  /// push fires), but kept distinct so staff can tell "no" from "not yet" on the worklist.
+  MAYBE_LATER
+}
+
+/// AVAILABLE               — normal; counted as available in search and matching.
+/// BUSY                    — donor said so themselves; temporarily out of the pool.
+/// RECENTLY_DONATED        — waiting out the usual gap between donations.
+/// TEMPORARILY_UNAVAILABLE — any other reason the donor is not reachable right now.
+/// Only AVAILABLE counts as available anywhere in search, matching or CRM stats.
+enum AvailabilityStatus {
+  AVAILABLE
+  BUSY
+  RECENTLY_DONATED
+  TEMPORARILY_UNAVAILABLE
 }
 
 enum CallOutcome {
@@ -87,10 +103,10 @@ enum CallOutcome {
 /// Everyone in the system: app users (DONOR/RECEIVER, phone + OTP) and CRM users
 /// (STAFF/ADMIN, email + password). Hence phone, email and passwordHash are all nullable.
 model User {
-  id     String  @id @default(cuid())
-  phone  String? @unique
-  email  String? @unique
-  name   String
+  id           String  @id @default(cuid())
+  phone        String? @unique
+  email        String? @unique
+  name         String
   /// bcrypt hash — staff/admin only. App users authenticate by OTP.
   passwordHash String?
 
@@ -117,15 +133,16 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  donorProfile  DonorProfile?
-  bloodRequests BloodRequest[] @relation("RequesterRequests")
-  matches       RequestMatch[]
-  notifications Notification[]
-  deviceTokens  DeviceToken[]
-  callsMade     CallLog[]      @relation("StaffCalls")
-  callsReceived CallLog[]      @relation("DonorCalls")
-  auditsMade    AuditLog[]     @relation("AuditActor")
-  auditsAbout   AuditLog[]     @relation("AuditTarget")
+  donorProfile   DonorProfile?
+  bloodRequests  BloodRequest[]       @relation("RequesterRequests")
+  matches        RequestMatch[]
+  notifications  Notification[]
+  deviceTokens   DeviceToken[]
+  passwordResets PasswordResetToken[]
+  callsMade      CallLog[]            @relation("StaffCalls")
+  callsReceived  CallLog[]            @relation("DonorCalls")
+  auditsMade     AuditLog[]           @relation("AuditActor")
+  auditsAbout    AuditLog[]           @relation("AuditTarget")
 
   @@index([status])
   @@index([role, status])
@@ -139,14 +156,22 @@ model DonorProfile {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  bloodGroup BloodGroup
-  gender     Gender
+  bloodGroup         BloodGroup
+  gender             Gender
   /// Nullable: the donor registration form (Phase 3 / mockup image 6) does not ask for a
   /// birth date, so it is only present for donors created by seed or edited later. When it
   /// is supplied the API enforces the 18-65 donation age range.
-  dateOfBirth      DateTime?
-  lastDonationDate DateTime?
-  isAvailable      Boolean   @default(true)
+  dateOfBirth        DateTime?
+  lastDonationDate   DateTime?
+  availabilityStatus AvailabilityStatus @default(AVAILABLE)
+
+  /// Kilograms. Nullable for the same reason dateOfBirth is: donors registered before this
+  /// field existed have none on file. New registrations are required to supply it.
+  weight           Float?
+  /// A second number to try when the donor's own phone does not answer. Free text — a
+  /// spouse's number, a landline, whatever the donor gives — and never shown to anyone
+  /// outside staff.
+  emergencyContact String?
 
   state    String
   district String
@@ -168,7 +193,7 @@ model DonorProfile {
   @@index([state, district, city])
   /// Supports the bounding-box pre-filter that keeps radius search fast without PostGIS.
   @@index([latitude, longitude])
-  @@index([bloodGroup, isAvailable])
+  @@index([bloodGroup, availabilityStatus])
 }
 
 model BloodRequest {
@@ -177,6 +202,9 @@ model BloodRequest {
   requester   User   @relation("RequesterRequests", fields: [requesterId], references: [id], onDelete: Cascade)
 
   bloodGroup   BloodGroup
+  /// Nullable for the same reason weight is on DonorProfile: requests posted before this
+  /// field existed have none on file. New requests are required to supply it.
+  patientName  String?
   unitsNeeded  Int
   hospitalName String
   contactPhone String
@@ -320,6 +348,24 @@ model AuditLog {
   @@index([targetUserId, createdAt])
   @@index([actorId, createdAt])
   @@index([action, createdAt])
+}
+
+/// A staff/admin password-reset link. App users (DONOR/RECEIVER) never get one — they sign
+/// in by OTP, so there is no password to lose. Only the hash of the raw token is stored, the
+/// same reasoning as OtpCode: a stolen row must not be a usable link.
+model PasswordResetToken {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
 }
 
 model DeviceToken {

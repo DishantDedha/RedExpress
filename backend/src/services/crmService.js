@@ -97,8 +97,11 @@ export function crmUserRow(user, summary) {
     bloodGroup: profile?.bloodGroup ?? null,
     bloodGroupLabel: profile ? bloodGroupLabel(profile.bloodGroup) : null,
     bloodGroupShort: profile ? bloodGroupShort(profile.bloodGroup) : null,
-    isAvailable: profile?.isAvailable ?? null,
+    availabilityStatus: profile?.availabilityStatus ?? null,
+    isAvailable: profile ? profile.availabilityStatus === 'AVAILABLE' : null,
     lastDonationDate: profile?.lastDonationDate ?? null,
+    weight: profile?.weight ?? null,
+    emergencyContact: profile?.emergencyContact ?? null,
 
     state: profile?.state ?? user.state ?? null,
     district: profile?.district ?? user.district ?? null,
@@ -297,6 +300,7 @@ export async function nearbyDonorsForRequest(requestId) {
       PENDING: 0,
       ACCEPTED: 0,
       DECLINED: 0,
+      MAYBE_LATER: 0,
     }),
     ...(preview
       ? {
@@ -363,7 +367,7 @@ export async function crmStats() {
     prisma.donorProfile.groupBy({ by: ['bloodGroup'], where: { user: { status: 'ACTIVE' } }, _count: { _all: true } }),
     prisma.donorProfile.groupBy({
       by: ['bloodGroup'],
-      where: { user: { status: 'ACTIVE' }, isAvailable: true },
+      where: { user: { status: 'ACTIVE' }, availabilityStatus: 'AVAILABLE' },
       _count: { _all: true },
     }),
     prisma.user.groupBy({ by: ['status'], where: { role: 'DONOR' }, _count: { _all: true } }),
@@ -411,5 +415,93 @@ export async function crmStats() {
       staleOpen: openExpired,
     },
     today: { matches: matchesToday, accepted: acceptedToday, calls: callsToday, markedDead: markedDeadToday },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Reports
+// ---------------------------------------------------------------------------
+
+/** "2026-08" -> "August 2026". Used to label the monthly-registrations report. */
+function monthLabel(key) {
+  const [year, month] = key.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+/** The last `months` calendar months, oldest first, each keyed "YYYY-MM". */
+function lastMonthKeys(months, now = new Date()) {
+  const keys = [];
+  for (let i = months - 1; i >= 0; i -= 1) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    keys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+  return keys;
+}
+
+/**
+ * GET /crm/reports — district-wise donors, blood-group-wise donors, registrations by
+ * month, and completed requests. Everything the spec's "Reports" screen asks for, in one
+ * call so the page renders from a single round trip.
+ */
+export async function crmReports() {
+  const since = new Date();
+  since.setMonth(since.getMonth() - 11);
+  since.setDate(1);
+  since.setHours(0, 0, 0, 0);
+
+  const [districtRows, groupTotals, registrations, completed, completedTotal] = await prisma.$transaction([
+    prisma.donorProfile.groupBy({
+      by: ['state', 'district'],
+      where: { user: { status: 'ACTIVE' } },
+      _count: { _all: true },
+    }),
+    prisma.donorProfile.groupBy({ by: ['bloodGroup'], _count: { _all: true } }),
+    prisma.user.findMany({
+      where: { role: { in: ['DONOR', 'RECEIVER'] }, createdAt: { gte: since } },
+      select: { role: true, createdAt: true },
+    }),
+    prisma.bloodRequest.findMany({
+      where: { status: 'FULFILLED' },
+      orderBy: { updatedAt: 'desc' },
+      take: 50,
+      include: { requester: { select: { name: true } } },
+    }),
+    prisma.bloodRequest.count({ where: { status: 'FULFILLED' } }),
+  ]);
+
+  const donorsByDistrict = districtRows
+    .map((row) => ({ state: row.state, district: row.district, donors: row._count._all }))
+    .sort((a, b) => b.donors - a.donors);
+
+  const donorsByBloodGroup = BLOOD_GROUPS.map((group) => ({
+    bloodGroup: group,
+    label: bloodGroupLabel(group),
+    short: bloodGroupShort(group),
+    donors: groupTotals.find((row) => row.bloodGroup === group)?._count._all ?? 0,
+  }));
+
+  const monthKeys = lastMonthKeys(12);
+  const monthly = new Map(monthKeys.map((key) => [key, { month: key, label: monthLabel(key), donors: 0, receivers: 0 }]));
+  for (const user of registrations) {
+    const key = `${user.createdAt.getFullYear()}-${String(user.createdAt.getMonth() + 1).padStart(2, '0')}`;
+    const bucket = monthly.get(key);
+    if (!bucket) continue; // outside the 12-month window by a day at either edge
+    if (user.role === 'DONOR') bucket.donors += 1;
+    else bucket.receivers += 1;
+  }
+
+  return {
+    generatedAt: new Date(),
+    donorsByDistrict,
+    donorsByBloodGroup,
+    monthlyRegistrations: [...monthly.values()],
+    completedRequests: {
+      total: completedTotal,
+      recent: completed.map((request) => requestView(request, { includeContact: false })),
+    },
   };
 }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { password } from './common.js';
 
 /**
  * Request-body shapes for /auth/*. Deeper phone validation (E.164 normalisation) happens
@@ -55,6 +56,19 @@ export const staffLoginSchema = z.object({
     .toLowerCase()
     .email('Enter a valid email address.'),
   password: z.string({ required_error: 'Enter your password.' }).min(1, 'Enter your password.'),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string({ required_error: 'Enter your email address.' })
+    .trim()
+    .toLowerCase()
+    .email('Enter a valid email address.'),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string({ required_error: 'This reset link is missing its token.' }).trim().min(1, 'This reset link is missing its token.'),
+  password,
 });
 
 export const refreshSchema = z.object({

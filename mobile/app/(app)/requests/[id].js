@@ -230,7 +230,7 @@ export default function RequestDetailScreen() {
   }
 
   const myResponse = request.myMatch?.response;
-  const answered = myResponse === 'ACCEPTED' || myResponse === 'DECLINED';
+  const answered = myResponse === 'ACCEPTED' || myResponse === 'DECLINED' || myResponse === 'MAYBE_LATER';
   const open = request.status === 'OPEN';
 
   return (
@@ -258,6 +258,7 @@ export default function RequestDetailScreen() {
       <Card>
         <View accessible accessibilityLabel={spokenSummary(request)}>
           <Fact label="Blood group" value={bloodGroupLabel(request.bloodGroup)} />
+          {request.patientName ? <Fact label="Patient" value={request.patientName} /> : null}
           <Fact label="How urgent" value={urgencyLabel(request.urgency)} />
           <Fact label="Units needed" value={`${request.unitsNeeded}`} />
           <Fact label="Hospital" value={request.hospitalName} />
@@ -297,7 +298,9 @@ export default function RequestDetailScreen() {
             <AppText variant="body" style={styles.answer}>
               {myResponse === 'ACCEPTED'
                 ? 'You said you can donate. The hospital has been told and can call you.'
-                : 'You said you cannot donate for this request. Thank you for answering.'}
+                : myResponse === 'MAYBE_LATER'
+                  ? 'You said maybe later. Come back to this request any time to change your answer.'
+                  : 'You said you cannot donate for this request. Thank you for answering.'}
             </AppText>
           ) : (
             <AppText variant="body" style={styles.answer}>
@@ -327,6 +330,15 @@ export default function RequestDetailScreen() {
                   disabled={Boolean(busy)}
                   onPress={() => respond('DECLINED')}
                   accessibilityHint="Tells our team you cannot help with this request"
+                />
+                <AppButton
+                  title={myResponse === 'MAYBE_LATER' ? 'Still ask me later' : 'Maybe later'}
+                  variant="link"
+                  loading={busy === 'MAYBE_LATER'}
+                  loadingLabel="Sending your answer"
+                  disabled={Boolean(busy)}
+                  onPress={() => respond('MAYBE_LATER')}
+                  accessibilityHint="Tells our team you cannot answer yet and may be able to help later"
                 />
               </>
             ) : (
@@ -429,6 +441,7 @@ function spokenSummary(request) {
   return [
     urgency ? `${urgency}.` : null,
     `${bloodGroupLabel(request.bloodGroup)} blood needed.`,
+    request.patientName ? `For ${request.patientName}.` : null,
     place ? `${place}${distance ? `, ${distance}` : ''}.` : null,
     `${request.unitsNeeded} ${request.unitsNeeded === 1 ? 'unit' : 'units'} needed.`,
     request.status === 'OPEN' ? expiryPhrase(request.expiresAt) : `This request is ${statusText(request).toLowerCase()}.`,

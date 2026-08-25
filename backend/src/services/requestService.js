@@ -65,6 +65,7 @@ export function requestView(request, { includeContact = false, extra = {} } = {}
     bloodGroupShort: bloodGroupShort(request.bloodGroup),
     compatibleDonorGroups: donorGroupsFor(request.bloodGroup),
     unitsNeeded: request.unitsNeeded,
+    ...(includeContact ? { patientName: request.patientName } : {}),
     urgency: request.urgency,
     note: request.note,
     state: request.state,
@@ -123,6 +124,7 @@ export async function createRequest(user, input) {
     data: {
       requesterId: user.id,
       bloodGroup: input.bloodGroup,
+      patientName: input.patientName,
       unitsNeeded: input.unitsNeeded,
       hospitalName: input.hospitalName,
       // Already normalised to E.164 by the schema.
@@ -340,7 +342,7 @@ export async function listMatches(user, requestId, params = {}) {
     matches: matches.map((match) => matchView(match, user)),
     counts: matches.reduce(
       (acc, match) => ({ ...acc, [match.response]: (acc[match.response] ?? 0) + 1 }),
-      { PENDING: 0, ACCEPTED: 0, DECLINED: 0 },
+      { PENDING: 0, ACCEPTED: 0, DECLINED: 0, MAYBE_LATER: 0 },
     ),
   };
 }
@@ -381,8 +383,9 @@ export async function respondToMatch(user, requestId, donorUserId, response) {
   const acceptedCount = await prisma.requestMatch.count({ where: { requestId, response: 'ACCEPTED' } });
 
   // The requester's phone is in their hand and the answer they are waiting for is "has
-  // anyone said yes". A decline is deliberately silent — a person in a hospital does not
-  // need a buzz for every "no", and the accepted count on screen already tells them.
+  // anyone said yes". A decline — or "maybe later" — is deliberately silent: a person in a
+  // hospital does not need a buzz for every "no" or "not yet", and the accepted count on
+  // screen already tells them.
   if (response === 'ACCEPTED') {
     try {
       await sendPush(
@@ -404,6 +407,8 @@ export async function respondToMatch(user, requestId, donorUserId, response) {
     message:
       response === 'ACCEPTED'
         ? 'Thank you. The hospital details are on this screen and the requester has been told you can help.'
-        : 'Thank you for answering. You will not be asked about this request again.',
+        : response === 'MAYBE_LATER'
+          ? 'Noted. Come back to this request any time to change your answer.'
+          : 'Thank you for answering. You will not be asked about this request again.',
   };
 }

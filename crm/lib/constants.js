@@ -79,12 +79,25 @@ export const MATCH_RESPONSES = {
   PENDING: { label: 'No answer yet', tone: 'neutral' },
   ACCEPTED: { label: 'Accepted', tone: 'success' },
   DECLINED: { label: 'Declined', tone: 'warning' },
+  MAYBE_LATER: { label: 'Maybe later', tone: 'neutral' },
 };
+
+/** A donor's four-state availability. Mirrors the Prisma AvailabilityStatus enum. */
+export const AVAILABILITY_STATUSES = [
+  { value: 'AVAILABLE', label: 'Available' },
+  { value: 'BUSY', label: 'Busy' },
+  { value: 'RECENTLY_DONATED', label: 'Recently donated' },
+  { value: 'TEMPORARILY_UNAVAILABLE', label: 'Temporarily unavailable' },
+];
 
 /** Audit actions, phrased as sentences a new staff member can read (see auditService.js). */
 export const AUDIT_ACTION_LABELS = {
   DONOR_MARKED_DEAD: 'Marked unreachable (dead)',
   DONOR_REACTIVATED: 'Reactivated',
+  USER_UPDATED: 'Record edited',
+  USER_BLOCKED: 'Account blocked',
+  USER_UNBLOCKED: 'Account unblocked',
+  USER_DELETED: 'Account deleted',
 };
 
 /** Matches the backend's SEARCH_DEFAULT_PAGE_SIZE so page numbers line up with its paging. */

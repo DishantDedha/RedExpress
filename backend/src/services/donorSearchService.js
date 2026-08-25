@@ -45,7 +45,7 @@ export function donorBaseWhere({
 
   return {
     ...(groups ? { bloodGroup: { in: groups } } : {}),
-    ...(availableOnly ? { isAvailable: true } : {}),
+    ...(availableOnly ? { availabilityStatus: 'AVAILABLE' } : {}),
     ...(state ? { state: areaMatch(state) } : {}),
     ...(district ? { district: areaMatch(district) } : {}),
     ...(city ? { city: areaMatch(city) } : {}),
@@ -86,7 +86,7 @@ const DONOR_SELECT = {
   userId: true,
   bloodGroup: true,
   gender: true,
-  isAvailable: true,
+  availabilityStatus: true,
   lastDonationDate: true,
   profilePhotoUrl: true,
   state: true,
@@ -136,7 +136,8 @@ export function donorSearchView(profile, viewer) {
     bloodGroupLabel: bloodGroupLabel(profile.bloodGroup),
     bloodGroupShort: bloodGroupShort(profile.bloodGroup),
     gender: profile.gender,
-    isAvailable: profile.isAvailable,
+    availabilityStatus: profile.availabilityStatus,
+    isAvailable: profile.availabilityStatus === 'AVAILABLE',
     lastDonationDate: profile.lastDonationDate,
     profilePhotoUrl: profile.profilePhotoUrl,
     state: profile.state,
@@ -153,6 +154,9 @@ export function donorSearchView(profile, viewer) {
           latitude: profile.latitude,
           longitude: profile.longitude,
           status: profile.user.status,
+          weight: profile.weight,
+          // Never shown to a searcher, only to staff — see the field's schema comment.
+          emergencyContact: profile.emergencyContact,
         }
       : {}),
   };

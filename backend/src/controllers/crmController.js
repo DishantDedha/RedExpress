@@ -1,7 +1,8 @@
 import { asyncHandler } from '../utils/errors.js';
-import { crmStats, getUserDetail, nearbyDonorsForRequest, searchUsers } from '../services/crmService.js';
+import { crmReports, crmStats, getUserDetail, nearbyDonorsForRequest, searchUsers } from '../services/crmService.js';
 import { listCalls, recordCall } from '../services/callLogService.js';
 import { markUserDead, reactivateUser } from '../services/donorLifecycleService.js';
+import { deleteUser, setUserStatus, updateUser } from '../services/crmAdminService.js';
 
 /** Thin HTTP layer — the rules live in crmService, callLogService and donorLifecycleService. */
 
@@ -35,4 +36,20 @@ export const reactivateHandler = asyncHandler(async (req, res) => {
 
 export const statsHandler = asyncHandler(async (req, res) => {
   res.status(200).json(await crmStats());
+});
+
+export const reportsHandler = asyncHandler(async (req, res) => {
+  res.status(200).json(await crmReports());
+});
+
+export const updateUserHandler = asyncHandler(async (req, res) => {
+  res.status(200).json(await updateUser(req.user, req.params.userId, req.body));
+});
+
+export const setUserStatusHandler = asyncHandler(async (req, res) => {
+  res.status(200).json(await setUserStatus(req.user, req.params.userId, req.body));
+});
+
+export const deleteUserHandler = asyncHandler(async (req, res) => {
+  res.status(200).json(await deleteUser(req.user, req.params.userId, req.body));
 });

@@ -65,6 +65,14 @@ const PATHS = {
   alert: (
     <path d="M12 2.8 22.4 20.8H1.6zm-1 6.2v5.4h2V9zm0 7v2h2v-2z" />
   ),
+  /** Three bars, rising — reports. */
+  chart: (
+    <>
+      <rect x="3.5" y="12" width="4.5" height="8.5" rx="1" />
+      <rect x="9.75" y="7" width="4.5" height="13.5" rx="1" />
+      <rect x="16" y="3" width="4.5" height="17.5" rx="1" />
+    </>
+  ),
 };
 
 export const ICON_NAMES = Object.keys(PATHS);

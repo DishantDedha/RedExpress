@@ -10,6 +10,7 @@ import { RequestStatusBadge, UrgencyBadge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/States';
 import WorklistTable from '@/components/worklist/WorklistTable';
 import LifecycleLegend from '@/components/worklist/LifecycleLegend';
+import RequestActions from '@/components/worklist/RequestActions';
 import { apiGet } from '@/lib/session';
 import { BackendError } from '@/lib/api';
 import { bloodGroupLabel } from '@/lib/constants';
@@ -67,6 +68,10 @@ export default async function RequestDetailPage({ params }) {
             This request has passed its expiry time. No further donors are being notified.
           </p>
         ) : null}
+      </div>
+
+      <div className="mb-6">
+        <RequestActions requestId={request.id} status={request.storedStatus} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

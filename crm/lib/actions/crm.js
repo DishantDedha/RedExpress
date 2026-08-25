@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { apiGet, apiSend, requireSession } from '@/lib/session';
 import { BackendError } from '@/lib/api';
-import { canMarkDead, canReactivate } from '@/lib/roles';
+import { canMarkDead, canReactivate, isAdmin, isStaff } from '@/lib/roles';
 
 /**
  * The three things staff *do* to a record: log a call, take a donor out of circulation, put
@@ -36,7 +36,7 @@ import { canMarkDead, canReactivate } from '@/lib/roles';
 /** Turns a BackendError into the failure half of the contract. */
 function failure(error) {
   if (error instanceof BackendError) {
-    return { ok: false, message: error.message, code: error.code };
+    return { ok: false, message: error.message, code: error.code, fields: error.fields };
   }
   throw error;
 }
@@ -187,6 +187,103 @@ export async function reactivateAction({ userId, note }) {
     revalidateDashboard();
 
     return { ok: true, message: result.message, user: result.user, effects: result.effects };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Record management — edit, suspend/unsuspend, delete
+// ---------------------------------------------------------------------------
+
+/** Editing a person's own record. ADMIN-only, same weight as reactivate. */
+export async function updateUserAction({ userId, ...fields }) {
+  const admin = await requireSession();
+  if (!isAdmin(admin)) {
+    return { ok: false, message: 'Only an administrator can edit a person’s record.', code: 'FORBIDDEN' };
+  }
+
+  try {
+    const result = await apiSend(`/crm/users/${encodeURIComponent(userId)}`, { method: 'PATCH', body: fields });
+    revalidateDashboard();
+    return { ok: true, message: result.message, user: result.user };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+/**
+ * Blocking is STAFF-and-ADMIN, the same split as mark-dead; unblocking is ADMIN-only, the
+ * same split as reactivate. The backend enforces this too (setUserStatus in
+ * crmAdminService.js) — this check only decides what the button says before that request
+ * is even sent.
+ */
+export async function setUserStatusAction({ userId, status, note }) {
+  const staff = await requireSession();
+  if (status === 'ACTIVE' ? !isAdmin(staff) : !isStaff(staff)) {
+    return {
+      ok: false,
+      message:
+        status === 'ACTIVE'
+          ? 'Only an administrator can unblock an account.'
+          : 'Your account cannot block someone.',
+      code: 'FORBIDDEN',
+    };
+  }
+
+  try {
+    const result = await apiSend(`/crm/users/${encodeURIComponent(userId)}/status`, {
+      method: 'PATCH',
+      body: { status, note: note || undefined },
+    });
+    revalidateDashboard();
+    return { ok: true, message: result.message, user: result.user };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+/** Permanently removes a donor or receiver. ADMIN-only — see crmAdminService.js. */
+export async function deleteUserAction({ userId, note }) {
+  const admin = await requireSession();
+  if (!isAdmin(admin)) {
+    return { ok: false, message: 'Only an administrator can delete a person’s record.', code: 'FORBIDDEN' };
+  }
+
+  try {
+    const result = await apiSend(`/crm/users/${encodeURIComponent(userId)}`, {
+      method: 'DELETE',
+      body: { note: note || undefined },
+    });
+    revalidateDashboard();
+    return { ok: true, message: result.message };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Blood requests
+// ---------------------------------------------------------------------------
+
+/**
+ * Closes a request from the CRM. Same backend endpoint the requester's own app uses
+ * (PATCH /requests/:id/status) — staff are allowed to call it too (requestService.js), so
+ * this is just wiring a button to a route that already existed.
+ */
+export async function updateRequestStatusAction({ requestId, status, note }) {
+  const staff = await requireSession();
+  if (!isStaff(staff)) {
+    return { ok: false, message: 'Your account cannot update blood requests.', code: 'FORBIDDEN' };
+  }
+
+  try {
+    const result = await apiSend(`/requests/${encodeURIComponent(requestId)}/status`, {
+      method: 'PATCH',
+      body: { status, note: note || undefined },
+    });
+    revalidateDashboard();
+    return { ok: true, message: result.message, request: result.request };
   } catch (error) {
     return failure(error);
   }

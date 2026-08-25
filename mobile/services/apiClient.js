@@ -191,15 +191,17 @@ export async function request(path, options = {}) {
   try {
     response = await rawRequest(path, { ...rest, token });
   } catch (error) {
+    // TEMPORARY — diagnosing the "Cannot reach Red Express" report on release builds, where
+    // logger.warn is a no-op and adb logcat isn't an option for whoever's testing. Nothing
+    // sensitive lands here: this only runs before any response (and therefore any token) has
+    // arrived. Revert once the real cause is found.
+    const raw = ` [${error?.name ?? 'Error'}: ${error?.message ?? 'no message'}]`;
+
     if (error?.name === 'AbortError') {
-      throw networkError('TIMEOUT', 'The server took too long to respond. Please try again.');
+      throw networkError('TIMEOUT', `The server took too long to respond. Please try again.${raw}`);
     }
-    // The user-facing copy stays generic on purpose — "the DNS resolver returned SERVFAIL"
-    // helps nobody mid sign-up. But collapsing every cause into one message with no trace of
-    // the original error means every network failure looks identical from here on, which is
-    // exactly the situation this line exists to end. logger.warn is a no-op outside __DEV__.
     logger.warn(`[api] ${rest.method ?? 'GET'} ${path} threw before a response arrived:`, error);
-    throw networkError('NETWORK_ERROR', 'Cannot reach Red Express. Check your connection and try again.');
+    throw networkError('NETWORK_ERROR', `Cannot reach Red Express. Check your connection and try again.${raw}`);
   }
 
   const payload = await parseBody(response);

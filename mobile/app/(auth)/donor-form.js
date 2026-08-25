@@ -31,6 +31,7 @@ import {
   checkEmail,
   checkPassword,
   checkPincode,
+  checkWeight,
   fieldErrorsFrom,
   reportErrors,
   required,
@@ -78,6 +79,8 @@ export default function DonorFormScreen() {
     bloodGroup: null,
     gender: null,
     dateOfBirth: null,
+    weight: '',
+    emergencyContact: '',
     state: 'Odisha',
     district: null,
     city: null,
@@ -109,6 +112,8 @@ export default function DonorFormScreen() {
     bloodGroup: useRef(null),
     gender: useRef(null),
     dateOfBirth: useRef(null),
+    weight: useRef(null),
+    emergencyContact: useRef(null),
     state: useRef(null),
     district: useRef(null),
     city: useRef(null),
@@ -151,6 +156,8 @@ export default function DonorFormScreen() {
     bloodGroup: 'Blood group',
     gender: 'Gender',
     dateOfBirth: 'Date of birth',
+    weight: 'Weight',
+    emergencyContact: 'Emergency contact',
     state: 'State',
     district: 'District',
     city: 'City or town',
@@ -173,6 +180,7 @@ export default function DonorFormScreen() {
       ['bloodGroup', () => (values.bloodGroup ? null : 'Choose a blood group.')],
       ['gender', () => (values.gender ? null : 'Choose a gender.')],
       ['dateOfBirth', () => checkDateOfBirth(values.dateOfBirth)],
+      ['weight', () => checkWeight(values.weight)],
       ['state', () => required(values.state, 'Choose your state.')],
       ['district', () => required(values.district, 'Choose your district.')],
       ['city', () => (values.city ? null : 'Choose your city or town.')],
@@ -210,6 +218,8 @@ export default function DonorFormScreen() {
         bloodGroup: values.bloodGroup,
         gender: values.gender,
         dateOfBirth: values.dateOfBirth ?? undefined,
+        weight: values.weight.trim(),
+        emergencyContact: values.emergencyContact.trim() || undefined,
         state: values.state,
         district: values.district,
         city: resolvedCity,
@@ -371,6 +381,28 @@ export default function DonorFormScreen() {
           onChange={(value) => set('dateOfBirth', value)}
           error={errors.dateOfBirth}
           helperText={`Optional. Donors must be between ${MIN_DONOR_AGE} and ${MAX_DONOR_AGE} years old.`}
+        />
+
+        <AppTextInput
+          ref={refs.weight}
+          label="Weight (kilograms)"
+          required
+          value={values.weight}
+          onChangeText={(text) => set('weight', text.replace(/[^\d.]/g, ''))}
+          error={errors.weight}
+          keyboardType="decimal-pad"
+          inputMode="decimal"
+        />
+
+        <AppTextInput
+          ref={refs.emergencyContact}
+          label="Emergency contact"
+          value={values.emergencyContact}
+          onChangeText={(text) => set('emergencyContact', text)}
+          error={errors.emergencyContact}
+          keyboardType="phone-pad"
+          inputMode="tel"
+          helperText="Optional. A second number to try if we cannot reach you — a family member, for example."
         />
       </Card>
 

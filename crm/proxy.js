@@ -33,18 +33,23 @@ import { CSRF_COOKIE, createCsrfToken, csrfCookieOptions } from '@/lib/csrf';
 
 const BACKEND_BASE_URL = process.env.BACKEND_API_BASE_URL ?? 'http://localhost:4000';
 
+const PUBLIC_AUTH_PATHS = new Set(['/login', '/forgot-password', '/reset-password']);
+
 export async function proxy(request) {
   const { pathname, search } = request.nextUrl;
 
   const accessToken = request.cookies.get(ACCESS_COOKIE)?.value;
   const refreshToken = request.cookies.get(REFRESH_COOKIE)?.value;
 
-  // Already signed in and asking for the login page — send them on through.
-  if (pathname === '/login') {
-    if (accessToken) return NextResponse.redirect(new URL('/dashboard', request.url));
-    // The login form posts to a route handler, which gets none of the Origin check Next
-    // applies to Server Actions. This is where its CSRF token is minted — the proxy is the
-    // only thing that runs before the page and is allowed to set a cookie. See lib/csrf.js.
+  // Sign-in and password-reset pages: reachable without a session, and each posts to a
+  // route handler rather than a Server Action, so each needs the CSRF cookie minted here —
+  // the proxy is the only thing that runs before the page and is allowed to set one. See
+  // lib/csrf.js.
+  if (PUBLIC_AUTH_PATHS.has(pathname)) {
+    // Already signed in and asking for the login page — send them on through. Forgot/reset
+    // password stay reachable either way: a signed-in staff member may still want to set a
+    // new password.
+    if (pathname === '/login' && accessToken) return NextResponse.redirect(new URL('/dashboard', request.url));
     return withCsrfToken(request, NextResponse.next());
   }
 
@@ -125,5 +130,5 @@ function redirectToLogin(request, returnTo, reason) {
 export const config = {
   // Without a matcher the proxy runs on static assets and image requests too, which would
   // put an auth check in front of the stylesheet.
-  matcher: ['/dashboard/:path*', '/login'],
+  matcher: ['/dashboard/:path*', '/login', '/forgot-password', '/reset-password'],
 };

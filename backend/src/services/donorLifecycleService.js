@@ -18,8 +18,8 @@ import { AUDIT_ACTIONS, recordAudit } from './auditService.js';
  *   2. tokenVersion + 1       — requireAuth compares the JWT claim against this column,
  *                               so every token they hold dies on their next request. This
  *                               is the forced logout; see docs/auth.md.
- *   3. isAvailable = false    — belt and braces, and it is what the donor sees on their
- *                               own profile when they come back.
+ *   3. availabilityStatus =    belt and braces, and it is what the donor sees on their
+ *      TEMPORARILY_UNAVAILABLE own profile when they come back.
  *
  * Coming back is entirely the donor's own doing: completePhoneLogin flips DEAD -> ACTIVE
  * on a successful OTP verify (authService). Nothing in this file is needed for the return
@@ -74,7 +74,7 @@ export async function markUserDead(staff, userId, { note, requestId } = {}) {
     if (!exists) throw ApiError.notFound('REQUEST_NOT_FOUND', 'That blood request no longer exists.');
   }
 
-  const wasAvailable = user.donorProfile?.isAvailable ?? null;
+  const wasAvailable = user.donorProfile ? user.donorProfile.availabilityStatus === 'AVAILABLE' : null;
 
   const { updated, callLog } = await prisma.$transaction(async (tx) => {
     const updated = await tx.user.update({
@@ -85,7 +85,7 @@ export async function markUserDead(staff, userId, { note, requestId } = {}) {
     });
 
     // updateMany, not update — a RECEIVER has no DonorProfile and update would throw.
-    await tx.donorProfile.updateMany({ where: { userId }, data: { isAvailable: false } });
+    await tx.donorProfile.updateMany({ where: { userId }, data: { availabilityStatus: 'TEMPORARILY_UNAVAILABLE' } });
 
     const callLog = await tx.callLog.create({
       data: {
@@ -175,7 +175,10 @@ export async function reactivateUser(admin, userId, { note } = {}) {
   const updated = await prisma.$transaction(async (tx) => {
     const updated = await tx.user.update({ where: { id: userId }, data: { status: 'ACTIVE' } });
 
-    await tx.donorProfile.updateMany({ where: { userId }, data: { isAvailable: restoreAvailability } });
+    await tx.donorProfile.updateMany({
+      where: { userId },
+      data: { availabilityStatus: restoreAvailability ? 'AVAILABLE' : 'TEMPORARILY_UNAVAILABLE' },
+    });
 
     await recordAudit(tx, {
       actorId: admin.id,

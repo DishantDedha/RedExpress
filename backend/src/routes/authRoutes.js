@@ -3,15 +3,19 @@ import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
 import { authAttemptLimiter, otpRequestLimiter } from '../middleware/rateLimit.js';
 import {
+  forgotPasswordSchema,
   otpRequestSchema,
   otpVerifySchema,
   refreshSchema,
+  resetPasswordSchema,
   staffLoginSchema,
   widgetVerifySchema,
 } from '../validation/authSchemas.js';
 import {
+  forgotPasswordHandler,
   refreshHandler,
   requestOtpHandler,
+  resetPasswordHandler,
   sessionHandler,
   staffLoginHandler,
   verifyOtpHandler,
@@ -39,6 +43,21 @@ authRouter.post(
 
 // CRM users — email + password. Same limiter as OTP verify: both are "guess until it works".
 authRouter.post('/staff/login', authAttemptLimiter, validate(staffLoginSchema), staffLoginHandler);
+
+// Same limiter again: a reset token is a secret worth guessing, same as an OTP or a
+// password.
+authRouter.post(
+  '/staff/forgot-password',
+  authAttemptLimiter,
+  validate(forgotPasswordSchema),
+  forgotPasswordHandler,
+);
+authRouter.post(
+  '/staff/reset-password',
+  authAttemptLimiter,
+  validate(resetPasswordSchema),
+  resetPasswordHandler,
+);
 
 // Shared.
 authRouter.post('/refresh', validate(refreshSchema), refreshHandler);

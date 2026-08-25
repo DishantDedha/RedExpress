@@ -42,7 +42,7 @@ const CANDIDATE_SELECT = {
   userId: true,
   bloodGroup: true,
   gender: true,
-  isAvailable: true,
+  availabilityStatus: true,
   lastDonationDate: true,
   profilePhotoUrl: true,
   state: true,

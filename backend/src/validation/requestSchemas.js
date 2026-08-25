@@ -10,7 +10,7 @@ import { pagination } from './searchSchemas.js';
 
 const URGENCIES = ['NORMAL', 'URGENT', 'CRITICAL'];
 const STATUSES = ['OPEN', 'FULFILLED', 'CANCELLED', 'EXPIRED'];
-const RESPONSES = ['PENDING', 'ACCEPTED', 'DECLINED'];
+const RESPONSES = ['PENDING', 'ACCEPTED', 'DECLINED', 'MAYBE_LATER'];
 
 function upperEnum(values, message) {
   return z.preprocess(
@@ -60,6 +60,7 @@ const expiresAt = z.preprocess(
 export const createRequestSchema = z
   .object({
     bloodGroup,
+    patientName: requiredText('the patient name', { min: 2, max: 120 }),
     unitsNeeded,
     hospitalName: requiredText('the hospital name', { min: 2, max: 160 }),
     contactPhone: phoneNumber('a contact number'),
@@ -111,6 +112,8 @@ export const listMatchesQuerySchema = z.object({
 });
 
 export const respondToMatchSchema = z.object({
-  // PENDING is a starting state, not an answer — a donor either can help or cannot.
-  response: upperEnum(['ACCEPTED', 'DECLINED'], 'Choose whether you can donate.'),
+  // PENDING is a starting state, not an answer. MAYBE_LATER is: a donor who can neither
+  // commit nor rule themselves out yet, kept distinct from DECLINED so staff can tell
+  // "no" from "not yet" on the worklist.
+  response: upperEnum(['ACCEPTED', 'DECLINED', 'MAYBE_LATER'], 'Choose whether you can donate.'),
 });

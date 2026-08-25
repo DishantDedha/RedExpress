@@ -44,6 +44,15 @@ export const gender = z.preprocess(
   z.enum(['MALE', 'FEMALE', 'OTHER'], { errorMap: () => ({ message: 'Choose a gender.' }) }),
 );
 
+export const AVAILABILITY_STATUSES = ['AVAILABLE', 'BUSY', 'RECENTLY_DONATED', 'TEMPORARILY_UNAVAILABLE'];
+
+export const availabilityStatus = z.preprocess(
+  (value) => (typeof value === 'string' ? value.trim().toUpperCase() : value),
+  z.enum(AVAILABILITY_STATUSES, {
+    errorMap: () => ({ message: 'Choose whether you are available to donate.' }),
+  }),
+);
+
 /** Indian postal code. Six digits, never starting at zero. */
 export const pincode = z
   .string({ required_error: 'Enter a PIN code.' })
@@ -106,6 +115,13 @@ export const longitude = numeric('a longitude', {
   min: -180,
   max: 180,
   rangeMessage: 'Longitude must be between -180 and 180.',
+});
+
+/** Kilograms. 30 is below any medically eligible donor; 300 is a generous upper bound. */
+export const weight = numeric('your weight in kilograms', {
+  min: 30,
+  max: 300,
+  rangeMessage: 'Weight must be between 30 and 300 kilograms.',
 });
 
 /**

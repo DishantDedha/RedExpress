@@ -6,6 +6,8 @@ import {
   completeWidgetLogin,
   publicUser,
   refreshAccessToken,
+  requestPasswordReset,
+  resetPassword,
   staffLogin,
   startPhoneLogin,
 } from '../services/authService.js';
@@ -44,6 +46,16 @@ export const verifyWidgetHandler = asyncHandler(async (req, res) => {
 
 export const staffLoginHandler = asyncHandler(async (req, res) => {
   const result = await staffLogin(req.body);
+  res.status(200).json(result);
+});
+
+export const forgotPasswordHandler = asyncHandler(async (req, res) => {
+  const result = await requestPasswordReset(req.body.email);
+  res.status(200).json(result);
+});
+
+export const resetPasswordHandler = asyncHandler(async (req, res) => {
+  const result = await resetPassword(req.body);
   res.status(200).json(result);
 });
 

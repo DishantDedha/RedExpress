@@ -60,14 +60,25 @@ export function RequestStatusBadge({ status }) {
   return <Badge tone={config.tone}>{config.label}</Badge>;
 }
 
-/** Whether the donor has their "available to donate" switch on. */
-export function AvailabilityBadge({ isAvailable }) {
-  if (isAvailable === null || isAvailable === undefined) {
-    return <Badge tone="neutral">No donor profile</Badge>;
+/** The donor's four-state availability, or the two-state form for older callers. */
+export function AvailabilityBadge({ availabilityStatus, isAvailable }) {
+  if (availabilityStatus === null || availabilityStatus === undefined) {
+    if (isAvailable === null || isAvailable === undefined) {
+      return <Badge tone="neutral">No donor profile</Badge>;
+    }
+    return isAvailable ? (
+      <Badge tone="success">Available</Badge>
+    ) : (
+      <Badge tone="warning">Not available</Badge>
+    );
   }
-  return isAvailable ? (
-    <Badge tone="success">Available</Badge>
-  ) : (
-    <Badge tone="warning">Not available</Badge>
-  );
+
+  const map = {
+    AVAILABLE: { tone: 'success', label: 'Available' },
+    BUSY: { tone: 'warning', label: 'Busy' },
+    RECENTLY_DONATED: { tone: 'warning', label: 'Recently donated' },
+    TEMPORARILY_UNAVAILABLE: { tone: 'warning', label: 'Temporarily unavailable' },
+  };
+  const config = map[availabilityStatus] ?? { tone: 'neutral', label: availabilityStatus };
+  return <Badge tone={config.tone}>{config.label}</Badge>;
 }
