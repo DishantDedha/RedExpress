@@ -1,10 +1,33 @@
 import { api } from './apiClient';
+import { logger } from './logger';
 import { getCachedUser, saveSession } from './tokenStorage';
 import {
   sendOtp as sendWidgetOtp,
   verifyOtp as verifyWidgetOtp,
   widgetAvailable,
 } from './otpWidget';
+
+/**
+ * Phones for which the widget has already failed once this session.
+ *
+ * `widgetAvailable()` only says the package and credentials are present — it says nothing
+ * about whether MSG91's SDK can actually complete a send right now. It cannot: on some Jio
+ * connections the SDK attempts carrier-network "invisible" verification over plain HTTP to
+ * `partnerapi.jio.com`, which Android refuses outright (cleartext is blocked by default since
+ * API 28), and the thrown exception reaches here as a raw, unrecoverable rejection — not the
+ * graceful fallback-to-SMS their own docs describe. Without this set, that exception would
+ * reach the phone screen as a wall of Java, with the backend's own OTP path — the one
+ * OTP_MASTER_CODE exists to keep working — sitting right there unused.
+ *
+ * Scoped to the phone, not the whole session, because a MSG91 outage should not quietly take
+ * down sign-in for a number the widget could actually reach. Cleared on app restart; there is
+ * no reason to remember a failure past that.
+ */
+const widgetFallbackPhones = new Set();
+
+function useWidgetFor(phone) {
+  return widgetAvailable() && !widgetFallbackPhones.has(phone);
+}
 
 /**
  * The auth calls, in one place.
@@ -29,14 +52,21 @@ import {
  *          `devCode` is only present when SMS_PROVIDER=console on a non-production backend.
  */
 export async function requestOtp(phone) {
-  if (!widgetAvailable()) {
-    return api.post('/auth/otp/request', { phone }, { auth: false });
+  if (useWidgetFor(phone)) {
+    try {
+      // The number is already normalised by the caller, and MSG91 has no opinion to return
+      // about it, so it is echoed back unchanged — the screens rely on this field either way.
+      const { expiresInSeconds } = await sendWidgetOtp(phone);
+      return { phone, expiresInSeconds };
+    } catch (error) {
+      // Recorded before falling back, so verifyOtp checks this code the same way it was
+      // sent — never against MSG91, which never generated it.
+      widgetFallbackPhones.add(phone);
+      logger.warn('[auth] MSG91 widget send failed; falling back to the backend OTP', error?.message);
+    }
   }
 
-  // The number is already normalised by the caller, and MSG91 has no opinion to return about
-  // it, so it is echoed back unchanged — the screens rely on this field either way.
-  const { expiresInSeconds } = await sendWidgetOtp(phone);
-  return { phone, expiresInSeconds };
+  return api.post('/auth/otp/request', { phone }, { auth: false });
 }
 
 /**
@@ -53,7 +83,12 @@ export async function verifyOtp({ phone, code, role = 'DONOR', mode = 'login' })
   // the resulting token for a session; on the fallback path the backend checks the code
   // itself. Both endpoints return the same payload, so nothing below this line differs — and
   // neither does anything in the screens that call it.
-  const result = widgetAvailable()
+  //
+  // useWidgetFor, not widgetAvailable — the code in the user's hand was sent by whichever
+  // path actually succeeded, which requestOtp may have downgraded for this phone after the
+  // widget failed. Checking config presence alone here would mean asking MSG91 to verify a
+  // code its own SDK never sent.
+  const result = useWidgetFor(phone)
     ? await api.post(
         '/auth/otp/widget-verify',
         // No phone number: the backend reads it from MSG91's verification of the token, and
