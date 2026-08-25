@@ -1,7 +1,15 @@
 import { prisma } from '../config/prisma.js';
 import { env } from '../config/env.js';
+import { centroidForDistrict } from '../data/odishaDistrictCentroids.js';
 import { boundingBox, coarseKm, longitudeRanges } from './geo.js';
-import { bloodGroupLabel, bloodGroupShort, rankByDistance, searchableDonorGroups, withinRadius } from './matching.js';
+import {
+  bloodGroupLabel,
+  bloodGroupShort,
+  expandingRadiusSearch,
+  rankByDistance,
+  searchableDonorGroups,
+  withinRadius,
+} from './matching.js';
 
 /**
  * Donor search — the query behind the app's "Find Blood Donors" screen and, in Phase 6,
@@ -213,6 +221,54 @@ async function searchByProximity(where, params, viewer) {
   };
 }
 
+/**
+ * Proximity search from an origin the searcher never gave us directly — a district
+ * centroid stood in for GPS. Same two-step bounding-box-then-Haversine approach as
+ * `searchByProximity`, but the radius is not the searcher's choice, so it has to be found:
+ * `expandingRadiusSearch` walks `env.search.expansionRadiiKm` outward until the current
+ * page is full (one candidate past it, so `hasMore` isn't a guess) or Odisha runs out.
+ *
+ * This is why an empty exact-city match no longer means an empty result: the search simply
+ * widens until it finds someone, same as it would for a receiver standing in a field with a
+ * GPS fix, just centred on the district's town instead of a phone's position.
+ */
+async function searchByExpandingProximity(where, origin, params, viewer) {
+  const { latitude, longitude } = origin;
+  const { page, pageSize, skip } = pageBounds(params);
+  const needed = skip + pageSize + 1;
+
+  let truncated = false;
+
+  const outcome = await expandingRadiusSearch({
+    radii: env.search.expansionRadiiKm,
+    minCandidates: needed,
+    search: async (radiusKm) => {
+      const rows = await prisma.donorProfile.findMany({
+        where: withBoundingBox(where, boundingBox(latitude, longitude, radiusKm)),
+        select: DONOR_SELECT,
+        take: env.search.maxCandidateRows,
+      });
+      truncated = truncated || rows.length === env.search.maxCandidateRows;
+      return withinRadius(rankByDistance(rows, { latitude, longitude }), radiusKm).filter(
+        (row) => row.distanceKm !== null,
+      );
+    },
+  });
+
+  const ranked = outcome.candidates;
+
+  return {
+    results: ranked.slice(skip, skip + pageSize).map((row) => donorSearchView(row, viewer)),
+    page,
+    pageSize,
+    total: ranked.length,
+    hasMore: ranked.length > skip + pageSize,
+    radiusKm: outcome.radiusKm,
+    mode: 'proximity',
+    truncated,
+  };
+}
+
 /** Administrative search. Postgres does the counting, sorting and paging. */
 async function searchByArea(where, params, viewer) {
   const { page, pageSize, skip } = pageBounds(params);
@@ -243,19 +299,43 @@ async function searchByArea(where, params, viewer) {
 /**
  * The GET /donors/search entry point. `viewer` is the authenticated caller: it decides
  * how much of each donor comes back, and keeps the caller out of their own results.
+ *
+ * Three ways to be placed, in order of preference:
+ *
+ *   1. Device GPS (`latitude`/`longitude` sent). Ranked by exact distance; any
+ *      state/district/city filter still applies as a hard boundary on top of it — "O-
+ *      donors in Cuttack district within 10 km of me" stays one query.
+ *
+ *   2. A typed district, no GPS. The district's centroid stands in for a position, and —
+ *      this is the part that changed — district/city/state stop being an exact filter and
+ *      become the thing being measured *from* instead. Applying "district = Puri" as a
+ *      filter and *also* as the search origin would just recreate exact-match search with
+ *      extra steps: nobody in Puri town itself would still mean an empty result, instead of
+ *      the nearest donor in Khordha showing up first. This is what turns "no one in your
+ *      exact city" into "nearest donor, wherever they are, nearest first".
+ *
+ *   3. Neither. Nothing to measure from, so it falls back to a plain administrative filter
+ *      (whatever of state/district/city/bloodGroup was given) in alphabetical order — the
+ *      original behaviour, for the cases too vague to place at all.
  */
 export async function searchDonors(params, viewer) {
+  const hasDeviceLocation = params.latitude !== undefined && params.longitude !== undefined;
+  const centroid = !hasDeviceLocation ? centroidForDistrict(params.district) : null;
+
   const where = donorBaseWhere({
     ...params,
+    // See (2) above: once the district is standing in for a position, filtering on it too
+    // would defeat the point.
+    ...(centroid ? { state: undefined, district: undefined, city: undefined } : {}),
     // Nobody needs to be told they themselves are nearby.
     excludeUserIds: viewer?.id ? [viewer.id] : [],
   });
 
-  const useProximity = params.latitude !== undefined && params.longitude !== undefined;
-
-  const result = useProximity
+  const result = hasDeviceLocation
     ? await searchByProximity(where, { ...params, radiusKm: params.radiusKm ?? env.search.defaultRadiusKm }, viewer)
-    : await searchByArea(where, params, viewer);
+    : centroid
+      ? await searchByExpandingProximity(where, centroid, params, viewer)
+      : await searchByArea(where, params, viewer);
 
   return {
     ...result,

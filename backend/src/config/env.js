@@ -213,11 +213,18 @@ export const env = {
   /// circle, so a 50 km radius over a dense city can match a lot of rows, and an
   /// unbounded read is the one way this design can hurt the database.
   search: {
-    defaultPageSize: int('SEARCH_DEFAULT_PAGE_SIZE', 20),
+    // 10, not the old 20: a searcher without GPS gets a district-centroid proximity search
+    // (see donorSearchService.resolveSearchOrigin), and "Show more" fetching the next 10 is
+    // the explicit shape asked for over one long first page.
+    defaultPageSize: int('SEARCH_DEFAULT_PAGE_SIZE', 10),
     maxPageSize: int('SEARCH_MAX_PAGE_SIZE', 100),
     defaultRadiusKm: int('SEARCH_DEFAULT_RADIUS_KM', 25),
     maxRadiusKm: int('SEARCH_MAX_RADIUS_KM', 500),
     maxCandidateRows: int('SEARCH_MAX_CANDIDATE_ROWS', 2000),
+    // Only used when the searcher has no GPS and search falls back to ranking from their
+    // district's centroid (donorSearchService.searchByExpandingProximity) — walked outward,
+    // same idea as MATCH_RADII_KM, until the current page is full or Odisha runs out.
+    expansionRadiiKm: numberList('SEARCH_EXPANSION_RADII_KM', [10, 25, 50, 100, 250, 500]),
   },
 
   /// The matching engine. "radius" walks MATCH_RADII_KM outwards until it has
