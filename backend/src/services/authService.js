@@ -110,6 +110,10 @@ async function finishPhoneLogin({ phone, role }) {
     reactivated: revived,
     // Lets the app route straight to the registration form instead of a half-empty home.
     profileComplete: Boolean(user.name) && (user.role !== 'DONOR' || Boolean(profile)),
+    // False for an account that predates the password requirement, or one mid-registration
+    // that hasn't reached the Security section yet. The app uses this to route to a
+    // "set a password" screen instead of home — OTP alone no longer signs anyone back in.
+    passwordSet: Boolean(user.passwordHash),
   };
 }
 
@@ -154,6 +158,75 @@ export async function completeWidgetLogin({ accessToken, role }) {
   return finishPhoneLogin({ phone: normalizePhone(verifiedPhone), role });
 }
 
+/**
+ * Sign-in with phone + password — the everyday way in for donors and receivers now. OTP is
+ * reserved for proving the phone number itself: once at registration, and again if staff
+ * mark the account unreachable.
+ *
+ * Checks run in an order that always favours sending the caller back through OTP over a
+ * password prompt they cannot satisfy: BLOCKED and DEAD are rejected before the password is
+ * even considered, and a correct password does not overrule either — see docs/crm-lifecycle.md
+ * for why the DEAD case is a deliberate re-verification, not just a login failure. A missing
+ * passwordHash (an account that predates this requirement) gets its own code so the app can
+ * route to "verify your number, then set a password" instead of a dead-end "wrong password".
+ */
+export async function loginWithPassword({ phone: rawPhone, password }) {
+  const phone = normalizePhone(rawPhone);
+  const user = await prisma.user.findUnique({ where: { phone } });
+
+  // Compared against something even when there is no user or no stored hash, so the
+  // response time does not itself reveal which case applies.
+  const passwordHash = user?.passwordHash ?? '$2a$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvalidinv';
+  const passwordOk = await bcrypt.compare(password, passwordHash);
+
+  if (!user || (user.role !== 'DONOR' && user.role !== 'RECEIVER')) {
+    throw ApiError.unauthorized('INVALID_CREDENTIALS', 'Mobile number or password is incorrect.');
+  }
+
+  if (user.status === 'BLOCKED') {
+    throw ApiError.forbidden('ACCOUNT_BLOCKED', 'This account is blocked. Contact Red Express support.');
+  }
+
+  if (user.status === 'DEAD') {
+    throw ApiError.forbidden(
+      'PHONE_REVERIFICATION_REQUIRED',
+      'Please verify your mobile number again to continue.',
+    );
+  }
+
+  if (!user.passwordHash) {
+    throw ApiError.forbidden(
+      'PASSWORD_NOT_SET',
+      'Verify your mobile number to set a password for this account.',
+    );
+  }
+
+  if (!passwordOk) {
+    throw ApiError.unauthorized('INVALID_CREDENTIALS', 'Mobile number or password is incorrect.');
+  }
+
+  return { ...issueTokens(user), user: publicUser(user) };
+}
+
+/**
+ * Sets the password on the caller's own, already-authenticated account.
+ *
+ * There is no "current password" check: reaching this endpoint at all already required a
+ * valid access token, and for the two callers that use it — a just-registered account and one
+ * that just re-verified its phone after PASSWORD_NOT_SET — proving the phone *is* the proof of
+ * ownership. Existing sessions are left alone; unlike a reset, this is not recovering from a
+ * lost credential, so there is nothing to invalidate.
+ */
+export async function setPassword(user, { password }) {
+  const passwordHash = await bcrypt.hash(password, env.bcryptRounds);
+  const updated = await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+
+  return {
+    user: publicUser(updated),
+    message: 'Password set. You can now sign in with your mobile number and password.',
+  };
+}
+
 export async function staffLogin({ email, password }) {
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
 
@@ -178,7 +251,9 @@ export async function staffLogin({ email, password }) {
 // ---------------------------------------------------------------------------
 
 /**
- * Staff and admin only — donors and receivers sign in by OTP and have no password to lose.
+ * Staff and admin only. App users who lose a password re-verify their phone and use
+ * `setPassword` above instead — a mailed reset link makes no sense for an account whose
+ * only contact detail is the phone number that already proves who they are.
  * A raw token is emailed; only its SHA-256 hash is stored, the same "never store the secret
  * itself" rule OtpCode follows for codes.
  */

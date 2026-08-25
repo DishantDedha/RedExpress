@@ -7,7 +7,6 @@ import { Chip } from './Chip';
 import { bloodGroupLabel } from '../data/bloodGroups';
 import { distancePhrase } from '../services/requests';
 import { callNumber } from '../utils/call';
-import { formatPhoneForDisplay, formatPhoneForSpeech } from '../utils/phone';
 import { colors, spacing } from '../theme';
 
 /**
@@ -53,6 +52,12 @@ import { colors, spacing } from '../theme';
  * No street address, no coordinates. The backend does not send them to an app user
  * (`donorSearchView`) — a distance is enough to decide who to ring, and publishing where
  * someone lives to anyone who can type a blood group is a different product.
+ *
+ * No phone number either, on screen or spoken. `donor.phone` still reaches this component —
+ * the Call button needs the digits to dial — but they are never rendered as text and never
+ * read aloud in the button's accessible name. A requester who wants to call a donor can, but
+ * cannot come away from the app knowing the number to ring back outside it, forward it on, or
+ * save it. That is the whole point of asking for it to be hidden rather than just unlabelled.
  */
 export function DonorCard({ donor, onCall }) {
   const group = bloodGroupLabel(donor.bloodGroup);
@@ -112,12 +117,6 @@ export function DonorCard({ donor, onCall }) {
             icon={donor.isAvailable ? 'check' : undefined}
           />
         </View>
-
-        {donor.phone ? (
-          <AppText variant="caption" color={colors.textMuted} style={styles.phone}>
-            {formatPhoneForDisplay(donor.phone)}
-          </AppText>
-        ) : null}
       </View>
 
       {donor.phone ? (
@@ -127,10 +126,9 @@ export function DonorCard({ donor, onCall }) {
             onCall?.(donor);
             callNumber(donor.phone, { name });
           }}
-          // The number is read digit by digit. Handed a bare phone number a screen reader
-          // says "seven billion, eight million…", which tells the user nothing about who
-          // they are about to ring.
-          accessibilityLabel={`Call ${name}, ${formatPhoneForSpeech(donor.phone)}`}
+          // Deliberately does not speak the digits — see "What is not on the card" above.
+          // The name is enough to identify who is about to be called.
+          accessibilityLabel={`Call ${name}`}
           accessibilityHint="Opens your phone's dialler with this number"
         />
       ) : (
@@ -163,7 +161,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   line: { marginTop: 2 },
-  phone: { marginTop: spacing.md },
 });
 
 export default DonorCard;

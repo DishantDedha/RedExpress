@@ -74,6 +74,22 @@ export function callOutcomeLabel(outcome) {
   return CALL_OUTCOMES[outcome]?.label ?? outcome ?? 'Not recorded';
 }
 
+/**
+ * A donor's reachability as reported by the *requesters* who tried to call them — never
+ * staff, never verified. Mirrors backend/src/services/donorReliabilityService.js.
+ *
+ * Deliberately separate from CALL_OUTCOMES above: that is staff's own verified record and
+ * feeds "Mark as unreachable" directly. This is a stranger's unconfirmed word, so even at
+ * its worst (UNRESPONSIVE) it is a prompt to go look, never a badge that means the same
+ * thing DEAD does.
+ */
+export const RELIABILITY_TAGS = {
+  LIKELY_TO_RESPOND: { label: 'Likely to respond', tone: 'success' },
+  SLOW_TO_RESPOND: { label: 'Slow to respond lately', tone: 'warning' },
+  UNRESPONSIVE: { label: 'Unresponsive — worth a look', tone: 'danger' },
+  NO_SIGNAL: { label: 'No call history yet', tone: 'neutral' },
+};
+
 /** A donor's answer to a push notification. */
 export const MATCH_RESPONSES = {
   PENDING: { label: 'No answer yet', tone: 'neutral' },

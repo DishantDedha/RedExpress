@@ -62,7 +62,6 @@ export default function FindDonorsScreen() {
 
   const [results, setResults] = useState(null); // null = no search run yet
   const [meta, setMeta] = useState(null);
-  const [status, setStatus] = useState(null); // { message, tone }
   const [searching, setSearching] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
@@ -90,7 +89,9 @@ export default function FindDonorsScreen() {
     setError(null);
     if (page === 1) {
       setSearching(true);
-      setStatus({ message: 'Searching for donors…', tone: 'progress' });
+      // Not a visible LiveMessage: the Search button's own loadingLabel already says this on
+      // screen, so it is only spoken here for a screen reader, not shown a second time.
+      say('Searching for donors…');
     } else {
       setLoadingMore(true);
       say('Loading more donors.');
@@ -113,7 +114,6 @@ export default function FindDonorsScreen() {
       // Appending rather than replacing on page 2 keeps the reader's place: replacing the
       // list would drop the cursor back to the top and the user would re-read the first ten.
       setResults((current) => (page === 1 ? result.results : [...(current ?? []), ...result.results]));
-      setStatus(null);
 
       const truncatedNote = result.truncated
         ? ' This is a partial list. Try a smaller radius for a complete answer.'
@@ -130,7 +130,6 @@ export default function FindDonorsScreen() {
       }
     } catch (err) {
       hapticError();
-      setStatus(null);
       setError(err.message);
       say(`Search failed. ${err.message}`);
     } finally {
@@ -247,7 +246,6 @@ export default function FindDonorsScreen() {
         />
       </Card>
 
-      <LiveMessage message={status?.message} tone={status?.tone ?? 'info'} />
       <LiveMessage message={error} tone="error" />
 
       {/* --- Results ------------------------------------------------------- */}

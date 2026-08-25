@@ -1,15 +1,30 @@
 # Authentication (Phase 2)
 
-Red Express has two audiences with two different sign-in methods and one shared token
+Red Express has two audiences with two different sign-in credentials and one shared token
 system.
 
 | Audience | Roles | Credential | Entry point |
 | --- | --- | --- | --- |
-| App users | `DONOR`, `RECEIVER` | Phone + 6-digit OTP | `POST /auth/otp/request` → `POST /auth/otp/verify` |
+| App users | `DONOR`, `RECEIVER` | Phone + password (bcrypt) | `POST /auth/login` |
 | CRM users | `STAFF`, `ADMIN` | Email + password (bcrypt) | `POST /auth/staff/login` |
 
 Both paths end at the same place: an **access token** (15 min) plus a **refresh token**
 (30 days), both signed JWTs.
+
+App users also have a phone + 6-digit OTP path (`POST /auth/otp/request` →
+`POST /auth/otp/verify`), but it is no longer how anyone signs in day to day. It exists to
+*prove a phone number*, and is only reached in three situations:
+
+1. **Registration** — proving the number before `POST /donors/register` /
+   `POST /receivers/register`, where the account's password is set.
+2. **Re-verification after `mark-dead`** — see "Why re-login clears DEAD" below.
+3. **Setting or resetting a password** — an account that predates the password
+   requirement, or a genuinely forgotten one, both land on `POST /auth/password/set` once
+   OTP has proven the phone.
+
+A donor whose correct password still works is *still* sent through OTP if their account is
+`DEAD` — `POST /auth/login` checks `status` before it even looks at the password, because the
+point of `DEAD` is that staff need proof of life, and a remembered password is not that proof.
 
 ---
 
@@ -77,6 +92,42 @@ up to 15 minutes later. If that read ever becomes a bottleneck, cache
 
 ## Endpoints
 
+### `POST /auth/login`
+
+```jsonc
+// request
+{ "phone": "9876543210", "password": "…" }
+
+// 200
+{ "accessToken": "…", "refreshToken": "…", "tokenType": "Bearer", "expiresIn": "15m",
+  "user": { "id": "…", "role": "DONOR", "status": "ACTIVE", … } }
+```
+
+The everyday way in for `DONOR` / `RECEIVER`. Checks run in an order that always prefers
+sending the caller back through OTP over a password prompt they cannot satisfy:
+
+1. `status = BLOCKED` → `403 ACCOUNT_BLOCKED`, whatever the password.
+2. `status = DEAD` → `403 PHONE_REVERIFICATION_REQUIRED`, whatever the password — the fix
+   is a fresh OTP verify, not a different password.
+3. No `passwordHash` on the account → `403 PASSWORD_NOT_SET` — an account that predates
+   this requirement, or is mid-registration. The app routes to OTP, then
+   `POST /auth/password/set`.
+4. Wrong password, or no such phone/role → `401 INVALID_CREDENTIALS`. A dummy bcrypt
+   compare always runs, the same enumeration guard `staffLogin` uses.
+
+### `POST /auth/password/set`
+
+```jsonc
+// request (requireAuth)
+{ "password": "…", "confirmPassword": "…" }
+```
+
+Sets the password on the *caller's own* already-authenticated account. There is no
+"current password" field: reaching this endpoint already required a valid access token,
+and for both callers that use it — a just-registered account, or one that just OTP-verified
+after `PASSWORD_NOT_SET` — proving the phone was the proof of ownership. Existing sessions
+are left alone; this is not a breach-recovery reset, so nothing is invalidated.
+
 ### `POST /auth/otp/request`
 
 ```jsonc
@@ -115,7 +166,8 @@ up to 15 minutes later. If that read ever becomes a bottleneck, cache
   "user": { "id": "…", "name": "", "phone": "+919876543210", "role": "DONOR", "status": "ACTIVE", … },
   "isNewUser": true,
   "reactivated": false,     // true when this login revived a DEAD donor
-  "profileComplete": false  // false → the app should route to the registration form
+  "profileComplete": false, // false → the app should route to the registration form
+  "passwordSet": false      // false → the app should route to "set a password" instead of home
 }
 ```
 
@@ -127,6 +179,10 @@ up to 15 minutes later. If that read ever becomes a bottleneck, cache
 - A brand-new user is created with an empty `name` — the donor/receiver registration
   endpoints in Phase 3 fill in the profile. `profileComplete` tells the client which
   screen to land on.
+- `passwordSet` is `Boolean(user.passwordHash)`. False on a completed profile means the
+  account predates the password requirement, or a forgotten password is mid-reset — the
+  app sends it to `POST /auth/password/set` rather than home, because password is now the
+  only everyday way back in.
 - `STAFF`/`ADMIN` accounts are refused here with `403 STAFF_MUST_USE_PASSWORD`.
 
 ### `POST /auth/staff/login`
@@ -197,9 +253,11 @@ router.get('/donors/search', optionalAuth, handler);                  // works s
 | `INVALID_TOKEN` | 401 | Bad signature, wrong token type, or unknown user |
 | `TOKEN_EXPIRED` | 401 | Access token past its 15 minutes — call `/auth/refresh` |
 | `TOKEN_VERSION_MISMATCH` | 401 | **Forced logout.** Clear tokens and send the user to sign in again |
-| `INVALID_CREDENTIALS` | 401 | Staff email/password wrong |
+| `INVALID_CREDENTIALS` | 401 | Phone/email or password wrong |
 | `ACCOUNT_BLOCKED` | 403 | `status = BLOCKED` |
 | `ACCOUNT_INACTIVE` | 403 | Staff account not `ACTIVE` |
+| `PHONE_REVERIFICATION_REQUIRED` | 403 | `status = DEAD` — route to OTP, not a retry |
+| `PASSWORD_NOT_SET` | 403 | No `passwordHash` yet — route to OTP, then `/auth/password/set` |
 | `STAFF_MUST_USE_PASSWORD` | 403 | Staff/admin tried the OTP path |
 | `FORBIDDEN` | 403 | Role not permitted for this route |
 

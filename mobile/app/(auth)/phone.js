@@ -18,11 +18,16 @@ import { formatPhoneForSpeech, normalizePhone } from '../../utils/phone';
 import { spacing } from '../../theme';
 
 /**
- * "Your mobile number" — mockups 5 and 9. One screen for both signing in and registering.
+ * "Your mobile number" — mockups 5 and 9. One screen for every reason a phone number needs
+ * proving: registering (`mode=register`), an account staff marked unreachable
+ * (`mode=reactivate`), and setting a password on an account that does not have a usable one,
+ * whether it never had one or the owner forgot it (`mode=set-password`).
  *
- * Sign-in and registration differ by a sentence of copy and by what happens after the code
- * is verified, which is a parameter, not a second screen. `mode` and `role` ride through to
- * `/otp`.
+ * Signing in day to day no longer touches this screen at all — that is `/login`, phone and
+ * password, no code. This one is reached only when a code is genuinely the thing needed next,
+ * and the three cases differ by a sentence of copy and by what happens after the code is
+ * verified, which is a parameter, not three separate screens. `mode` and `role` ride through
+ * to `/otp`.
  *
  * The title sits on a red band and the field sits on white below it. That is not only for
  * looks: a text input on a saturated background has to invert its outline, its label and its
@@ -48,17 +53,23 @@ import { spacing } from '../../theme';
  * **Validation happens before the request.** The rules mirror the backend's exactly, so the
  * user is never told a number is fine and then told by the server that it is not.
  */
+const PHONE_MODE_SUBTITLES = {
+  register: 'We will send a one time password to confirm this is your number.',
+  reactivate:
+    'Your account needs your phone verified again before you can sign in. We will send a one time password.',
+  'set-password':
+    'We will send a one time password to confirm this is your number, then you can set a password.',
+};
+
 export default function PhoneScreen() {
   const router = useRouter();
   const say = useAnnounce();
   const inputRef = useRef(null);
 
-  const { mode = 'login', role = 'DONOR', notice, reason } = useLocalSearchParams();
-  const registering = mode === 'register';
+  const { mode = 'reactivate', role = 'DONOR', notice, reason } = useLocalSearchParams();
 
   const [value, setValue] = useState('');
   const [fieldError, setFieldError] = useState(null);
-  const [status, setStatus] = useState(null); // { message, tone }
   const [sending, setSending] = useState(false);
 
   // Render's free tier sleeps the backend after idle. In the widget flow (real builds only —
@@ -78,7 +89,6 @@ export default function PhoneScreen() {
 
   function fail(message) {
     setFieldError(message);
-    setStatus(null);
     hapticError();
 
     // The error is announced by the field's own live region; this moves the reader's cursor
@@ -101,7 +111,9 @@ export default function PhoneScreen() {
 
     setFieldError(null);
     setSending(true);
-    setStatus({ message: 'Sending code…', tone: 'progress' });
+    // Not a visible LiveMessage: the button's own loadingLabel already says this on screen,
+    // so it is only spoken here for a screen reader, not shown a second time.
+    say('Sending code…');
 
     try {
       const response = await requestOtp(result.phone);
@@ -125,7 +137,6 @@ export default function PhoneScreen() {
         },
       });
     } catch (error) {
-      setStatus(null);
       // The backend writes these messages in plain language and they are safe to show —
       // "Too many code requests. Please wait 15 minutes and try again." is far more use
       // than a generic failure.
@@ -140,11 +151,7 @@ export default function PhoneScreen() {
       hero={
         <ScreenHeader
           title="Your mobile number"
-          subtitle={
-            registering
-              ? 'We will send a one time password to confirm this is your number.'
-              : 'We will send a one time password to sign you in.'
-          }
+          subtitle={PHONE_MODE_SUBTITLES[mode] ?? PHONE_MODE_SUBTITLES.reactivate}
           tone="brand"
           voicePurpose="Enter your ten digit mobile number. We will text you a one time password."
           voiceAction="Send one time password"
@@ -189,11 +196,6 @@ export default function PhoneScreen() {
         autoFocus={false}
         containerStyle={styles.field}
       />
-
-      {/* Progress and outcome, shown and spoken. The field and the status now sit on the
-          white sheet, so the default light-surface colours apply — `onBrand` was only ever
-          there to keep the bare progress text legible on red. */}
-      <LiveMessage message={status?.message} tone={status?.tone ?? 'info'} />
     </Screen>
   );
 }

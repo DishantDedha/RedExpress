@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Card from '@/components/ui/Card';
 import StatusBadge from '@/components/ui/StatusBadge';
-import Badge, { AvailabilityBadge } from '@/components/ui/Badge';
+import Badge, { AvailabilityBadge, ReliabilityBadge } from '@/components/ui/Badge';
 import CallHistory from '@/components/CallHistory';
 import DonorActions from '@/components/worklist/DonorActions';
 import LifecycleLegend from '@/components/worklist/LifecycleLegend';
@@ -41,6 +41,7 @@ export default function DonorRecordPanel({ user, initialCalls, canBeMarked }) {
             availabilityStatus={status === 'DEAD' ? 'TEMPORARILY_UNAVAILABLE' : user.availabilityStatus}
           />
         ) : null}
+        {user.role === 'DONOR' ? <ReliabilityBadge reliability={user.reliability} /> : null}
         {user.isPhoneVerified ? (
           <Badge tone="success">Phone verified</Badge>
         ) : (

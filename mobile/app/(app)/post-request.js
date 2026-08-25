@@ -156,7 +156,9 @@ export default function PostRequestScreen() {
     }
 
     setSubmitting(true);
-    setStatus({ message: 'Posting your request and finding donors nearby…', tone: 'progress' });
+    // Not a visible LiveMessage: the button's own loadingLabel already says this on screen,
+    // so it is only spoken here for a screen reader, not shown a second time.
+    say('Posting your request and finding donors nearby…');
 
     try {
       const result = await createRequest({

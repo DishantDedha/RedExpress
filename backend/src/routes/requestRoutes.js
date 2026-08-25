@@ -5,6 +5,7 @@ import {
   createRequestSchema,
   listMatchesQuerySchema,
   listRequestsQuerySchema,
+  requesterCallOutcomeSchema,
   respondToMatchSchema,
   updateRequestStatusSchema,
 } from '../validation/requestSchemas.js';
@@ -13,6 +14,7 @@ import {
   getRequestHandler,
   listMatchesHandler,
   listRequestsHandler,
+  recordRequesterCallOutcomeHandler,
   respondToMatchHandler,
   updateRequestStatusHandler,
 } from '../controllers/requestController.js';
@@ -36,3 +38,11 @@ requestRouter.get('/:id/matches', validate(listMatchesQuerySchema, 'query'), lis
 
 // A donor answering a push notification. Only the donor named in the URL may call it.
 requestRouter.post('/:id/matches/:donorId/respond', validate(respondToMatchSchema), respondToMatchHandler);
+
+// The requester's own report of how their call to this donor went. Only the request's
+// author may call it — see recordRequesterCallOutcome for why staff are not included.
+requestRouter.post(
+  '/:id/matches/:donorId/call-outcome',
+  validate(requesterCallOutcomeSchema),
+  recordRequesterCallOutcomeHandler,
+);

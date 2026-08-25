@@ -1,7 +1,21 @@
 import { StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router/js-tabs';
-import { Icon } from '../../../components';
+import { HeaderBackButton, Icon } from '../../../components';
 import { colors, spacing, typography, a11y } from '../../../theme';
+
+/**
+ * Header options for the two tabs Home also links into directly (`find-donors`,
+ * `notifications`). Reaching either from a Home tile is a tab switch, not a push, so there is
+ * no automatic back button to fall back on — see `HeaderBackButton`.
+ */
+const backToHomeHeader = {
+  headerShown: true,
+  headerTransparent: true,
+  headerStyle: { backgroundColor: 'transparent' },
+  headerShadowVisible: false,
+  headerTitle: '',
+  headerLeft: () => <HeaderBackButton />,
+};
 
 /**
  * The four places a signed-in user actually goes.
@@ -69,18 +83,22 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="find-donors"
+        name="donate"
         options={{
-          title: 'Find',
-          // "Find" is what fits under an icon; it is not what should be spoken, because on
-          // its own it does not say find *what*.
-          tabBarAccessibilityLabel: 'Find blood donors',
-          tabBarIcon: ({ color, size }) => <Icon name="search" size={size} color={color} />,
+          title: 'Donate',
+          tabBarAccessibilityLabel: 'Donate to Red Express',
+          tabBarIcon: ({ color, size }) => <Icon name="heart" size={size} color={color} />,
         }}
       />
+      {/* Off the bar, not gone — the file-based navigator auto-lists every screen in this
+          directory, so dropping the Tabs.Screen for a removed tab does not remove the route,
+          it just shows up with default options. `href: null` is the documented way to keep
+          `/find-donors` reachable (Home still links to it) without a slot in the bar. */}
+      <Tabs.Screen name="find-donors" options={{ href: null, ...backToHomeHeader }} />
       <Tabs.Screen
         name="notifications"
         options={{
+          ...backToHomeHeader,
           title: 'Alerts',
           tabBarAccessibilityLabel: 'Your alerts',
           tabBarIcon: ({ color, size }) => <Icon name="bell" size={size} color={color} />,

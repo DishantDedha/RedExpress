@@ -7,6 +7,7 @@ import { donorSearchView } from './donorSearchService.js';
 import { findCandidates, matchView } from './matchingEngine.js';
 import { isExpired, requestView } from './requestService.js';
 import { callSummariesFor, listCalls } from './callLogService.js';
+import { donorReliabilityFor } from './donorReliabilityService.js';
 import { listAuditForUser } from './auditService.js';
 
 /**
@@ -80,7 +81,7 @@ function areaWhere(field, value) {
 const USER_INCLUDE = { donorProfile: true };
 
 /** One row of the CRM people table. */
-export function crmUserRow(user, summary) {
+export function crmUserRow(user, summary, reliability) {
   const profile = user.donorProfile ?? null;
 
   return {
@@ -113,6 +114,11 @@ export function crmUserRow(user, summary) {
 
     lastCall: summary?.lastCall ?? null,
     callCount: summary?.callCount ?? 0,
+
+    // Soft, requester-reported signal — never the trigger for a status change itself. See
+    // donorReliabilityService.js for why this stays separate from lastCall/callCount above,
+    // which come from staff's own verified CallLog.
+    reliability: reliability ?? null,
   };
 }
 
@@ -149,10 +155,13 @@ export async function searchUsers(params = {}) {
     }),
   ]);
 
-  const summaries = await callSummariesFor(users.map((user) => user.id));
+  const [summaries, reliabilities] = await Promise.all([
+    callSummariesFor(users.map((user) => user.id)),
+    donorReliabilityFor(users.filter((user) => user.role === 'DONOR').map((user) => user.id)),
+  ]);
 
   return {
-    results: users.map((user) => crmUserRow(user, summaries.get(user.id))),
+    results: users.map((user) => crmUserRow(user, summaries.get(user.id), reliabilities.get(user.id))),
     page,
     pageSize,
     total,
@@ -183,8 +192,9 @@ export async function getUserDetail(userId) {
   const user = await prisma.user.findUnique({ where: { id: userId }, include: USER_INCLUDE });
   if (!user) throw ApiError.notFound('USER_NOT_FOUND', 'That person is no longer in Red Express.');
 
-  const [summaries, calls, audit, requests, matches] = await Promise.all([
+  const [summaries, reliabilities, calls, audit, requests, matches] = await Promise.all([
     callSummariesFor([user.id]),
+    user.role === 'DONOR' ? donorReliabilityFor([user.id]) : Promise.resolve(new Map()),
     listCalls({ donorUserId: user.id, take: 50 }),
     listAuditForUser(user.id),
     prisma.bloodRequest.findMany({
@@ -202,7 +212,7 @@ export async function getUserDetail(userId) {
   ]);
 
   return {
-    user: crmUserRow(user, summaries.get(user.id)),
+    user: crmUserRow(user, summaries.get(user.id), reliabilities.get(user.id)),
     // The unredacted profile — address, PIN code and coordinates included. Staff only.
     donorProfile: user.donorProfile
       ? donorSearchView({ ...user.donorProfile, user, distanceKm: null }, STAFF_VIEWER)
@@ -285,7 +295,10 @@ export async function nearbyDonorsForRequest(requestId) {
         donor: donorSearchView(candidate, STAFF_VIEWER),
       }));
 
-  const summaries = await callSummariesFor(rows.map((row) => row.donorUserId));
+  const [summaries, reliabilities] = await Promise.all([
+    callSummariesFor(rows.map((row) => row.donorUserId)),
+    donorReliabilityFor(rows.map((row) => row.donorUserId)),
+  ]);
 
   return {
     request: requestView(request, { includeContact: true }),
@@ -295,6 +308,7 @@ export async function nearbyDonorsForRequest(requestId) {
       ...row,
       lastCall: summaries.get(row.donorUserId)?.lastCall ?? null,
       callCount: summaries.get(row.donorUserId)?.callCount ?? 0,
+      reliability: reliabilities.get(row.donorUserId) ?? null,
     })),
     counts: rows.reduce((acc, row) => ({ ...acc, [row.response ?? 'PENDING']: (acc[row.response ?? 'PENDING'] ?? 0) + 1 }), {
       PENDING: 0,

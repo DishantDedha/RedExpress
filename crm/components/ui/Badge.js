@@ -1,3 +1,5 @@
+import { RELIABILITY_TAGS } from '@/lib/constants';
+
 /**
  * The general-purpose pill: urgency, call outcome, match response, availability.
  *
@@ -81,4 +83,25 @@ export function AvailabilityBadge({ availabilityStatus, isAvailable }) {
   };
   const config = map[availabilityStatus] ?? { tone: 'neutral', label: availabilityStatus };
   return <Badge tone={config.tone}>{config.label}</Badge>;
+}
+
+/**
+ * The requester-reported reachability tag (see RELIABILITY_TAGS). Renders nothing for
+ * NO_SIGNAL as well as for a missing summary — most donors have never had a call reported
+ * on them yet, and a "No call history" pill on every single row would be noise, not
+ * information. It only appears once there is something to say.
+ */
+export function ReliabilityBadge({ reliability }) {
+  if (!reliability || reliability.tag === 'NO_SIGNAL') return null;
+
+  const config = RELIABILITY_TAGS[reliability.tag] ?? RELIABILITY_TAGS.NO_SIGNAL;
+  const hint = reliability.noAnswerStreak
+    ? `${reliability.noAnswerStreak} no-answer ${reliability.noAnswerStreak === 1 ? 'report' : 'reports'} in a row, as told to us by requesters — not verified by staff.`
+    : 'Requesters have not reported how a call with this donor went yet.';
+
+  return (
+    <Badge tone={config.tone} title={hint}>
+      {config.label}
+    </Badge>
+  );
 }

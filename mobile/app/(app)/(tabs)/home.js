@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   ActionRow,
@@ -15,7 +15,6 @@ import {
   SectionHeading,
 } from '../../../components';
 import { bloodGroupLabel } from '../../../data/bloodGroups';
-import { listNotifications } from '../../../services/notifications';
 import { getMe } from '../../../services/profile';
 import { colors, spacing } from '../../../theme';
 
@@ -34,7 +33,7 @@ import { colors, spacing } from '../../../theme';
  *   who am I      the hero band — name, blood group, whether you are currently listed as
  *                 available. The three facts a donor opens the app to check.
  *   what can I do two tiles, sized and coloured to say which is the primary action.
- *   what happened the alerts card, carrying its unread count.
+ *   what happened the requests card, pointing at what you have posted and its status.
  *
  * The five housekeeping buttons moved to the profile tab, and the four destinations that
  * were buried in that column are now permanent tabs — see `(tabs)/_layout.js`.
@@ -49,17 +48,24 @@ import { colors, spacing } from '../../../theme';
  *
  * Reloaded with `useFocusEffect` rather than `useEffect`, because coming back from the
  * profile tab after switching availability off must not leave this screen insisting you are
- * available — and coming back from the alerts tab must not leave a stale unread count.
+ * available.
  *
  * `PushConsent` sits at the top of the sheet because notification permission is asked once
  * per install and a donor who never sees the explanation never gets alerted about anything.
  * It renders nothing at all once alerts are on.
+ *
+ * ## Alerts are not shown here twice
+ *
+ * This screen used to carry its own "N unread" preview tile alongside the Alerts tab in the
+ * bar below — the same destination, reached two ways, with the count kept in sync in two
+ * places instead of one. The tab bar is always visible and already says "Alerts"; a second
+ * entry point one scroll away added a decision ("which one do I tap") without adding
+ * information. What sat there now points at requests, which the tab bar has no tab for.
  */
 export default function HomeScreen() {
   const router = useRouter();
 
   const [me, setMe] = useState(null);
-  const [unreadCount, setUnreadCount] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -82,16 +88,6 @@ export default function HomeScreen() {
         })
         .finally(() => {
           if (active) setLoading(false);
-        });
-
-      // The badge only needs the count, so the smallest page the server will serve is
-      // requested — `unreadCount` comes back on every response regardless of the filter.
-      listNotifications({ unreadOnly: true, pageSize: 1 })
-        .then((result) => {
-          if (active) setUnreadCount(result.unreadCount);
-        })
-        .catch(() => {
-          // A missing badge is not worth an error banner on the home screen.
         });
 
       return () => {
@@ -159,7 +155,22 @@ export default function HomeScreen() {
             ) : null}
           </ScreenHeader>
 
-          {name ? <Avatar name={name} size={56} tone="onBrand" style={styles.avatar} /> : null}
+          {name ? (
+            // The avatar looks like a profile shortcut everywhere this pattern appears, so it
+            // has to behave like one — previously this was a plain decorative View a tap did
+            // nothing to. `/profile` is one of the four permanent tabs (see (tabs)/_layout.js),
+            // so this just switches tabs; it does not push a new screen over the bar.
+            <Pressable
+              onPress={() => router.push('/profile')}
+              accessibilityRole="button"
+              accessibilityLabel="Open your profile"
+              accessibilityHint="Opens your profile, availability and account settings"
+              hitSlop={8}
+              style={({ pressed }) => [styles.avatarButton, pressed && styles.avatarButtonPressed]}
+            >
+              <Avatar name={name} size={56} tone="onBrand" />
+            </Pressable>
+          ) : null}
         </View>
       }
     >
@@ -193,19 +204,14 @@ export default function HomeScreen() {
         />
       </ActionRow>
 
-      <SectionHeading title="Your alerts" style={styles.section} />
+      <SectionHeading title="Your requests" style={styles.section} />
 
       <ActionTile
-        title={unreadCount ? `${unreadCount} unread` : 'Nothing unread'}
-        description="Blood requests you have been alerted about."
-        icon="bell"
-        onPress={() => router.push('/notifications')}
-        // The count is in the visible title as well, so it is never carried by a coloured
-        // dot alone — but it is spelled out here in case the title is truncated.
-        accessibilityLabel={
-          unreadCount ? `Your alerts. ${unreadCount} unread.` : 'Your alerts. Nothing unread.'
-        }
-        accessibilityHint="Blood requests you have been alerted about"
+        title="See your requests"
+        description="Everything you have posted, and its status."
+        icon="list"
+        onPress={() => router.push('/requests')}
+        accessibilityHint="Requests you have posted, and whether they are still open"
       />
 
       {donor ? (
@@ -269,7 +275,8 @@ const styles = StyleSheet.create({
   heroHeader: { marginBottom: 0, paddingRight: 72 },
   // Sits in the space the header's right padding reserved for it, so a long name wraps
   // beside the avatar instead of underneath it.
-  avatar: { position: 'absolute', top: 0, right: 0 },
+  avatarButton: { position: 'absolute', top: 0, right: 0, borderRadius: 999 },
+  avatarButtonPressed: { opacity: 0.75 },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import DataTable from '@/components/ui/DataTable';
 import StatusBadge from '@/components/ui/StatusBadge';
 import BloodGroup from '@/components/ui/BloodGroup';
-import Badge, { AvailabilityBadge } from '@/components/ui/Badge';
+import Badge, { AvailabilityBadge, ReliabilityBadge } from '@/components/ui/Badge';
 import DonorActions from '@/components/worklist/DonorActions';
 import CallHistoryDisclosure from '@/components/worklist/CallHistoryDisclosure';
 import { MATCH_RESPONSES } from '@/lib/constants';
@@ -86,6 +86,7 @@ export default function WorklistTable({ requestId, donors, caption, isPreview = 
           <AvailabilityBadge
             availabilityStatus={row.status === 'DEAD' ? 'TEMPORARILY_UNAVAILABLE' : row.donor?.availabilityStatus}
           />
+          <ReliabilityBadge reliability={row.reliability} />
         </div>
       ),
     },

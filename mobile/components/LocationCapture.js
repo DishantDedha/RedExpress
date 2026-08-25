@@ -48,7 +48,8 @@ export function LocationCapture({
     if (busy || disabled) return;
 
     setBusy(true);
-    setStatus({ message: 'Getting your location…', tone: 'progress' });
+    // Not a visible status line: the button's own loadingLabel already says this on screen,
+    // so it is only spoken here for a screen reader, not shown a second time.
     announce('Getting your location.');
 
     const result = await captureCurrentPosition();

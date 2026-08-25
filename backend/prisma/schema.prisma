@@ -96,6 +96,19 @@ enum CallOutcome {
   MARKED_DEAD
 }
 
+/// A requester's own report of how their phone call to a matched donor went — distinct
+/// from CallOutcome, which is what STAFF record. This is unverified (any requester can say
+/// anything about anyone they were matched with), so it feeds only a soft, staff-reviewed
+/// signal (see donorReliabilityService.js) and never an automatic account action the way
+/// CallOutcome.MARKED_DEAD does. No MARKED_DEAD equivalent here on purpose.
+enum RequesterCallOutcome {
+  PICKED_UP
+  NO_ANSWER
+  /// A data problem (the number on file is wrong), not a behaviour one — excluded from the
+  /// no-answer streak entirely rather than counted against the donor.
+  WRONG_NUMBER
+}
+
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
@@ -253,11 +266,21 @@ model RequestMatch {
   response    MatchResponse @default(PENDING)
   respondedAt DateTime?
 
+  /// The requester's own account of how their call to this donor went — see
+  /// RequesterCallOutcome. Set once, by the requester, any time after the match is created;
+  /// overwritten rather than duplicated on a second report for the same match. Visible only
+  /// to the requester who wrote it and to staff, never to the donor it is about.
+  requesterCallOutcome   RequesterCallOutcome?
+  requesterCallOutcomeAt DateTime?
+
   createdAt DateTime @default(now())
 
   @@unique([requestId, donorUserId])
   @@index([donorUserId, response])
   @@index([requestId, distanceKm])
+  /// Backs the reliability streak walk in donorReliabilityService.js — a donor's most
+  /// recent matches, newest first.
+  @@index([donorUserId, createdAt])
 }
 
 /// In-app inbox row, written alongside every push so history survives the notification tray.

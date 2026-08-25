@@ -339,11 +339,55 @@ export async function listMatches(user, requestId, params = {}) {
 
   return {
     request: requestView(request, { includeContact: true }),
-    matches: matches.map((match) => matchView(match, user)),
+    // requesterCallOutcome is deliberately not part of the shared matchView — that view is
+    // also what a donor sees of their own match, and this is the requester's private report
+    // about them. listMatches is already gated to staff/owner above, so it is safe to add
+    // here only.
+    matches: matches.map((match) => ({
+      ...matchView(match, user),
+      requesterCallOutcome: match.requesterCallOutcome,
+      requesterCallOutcomeAt: match.requesterCallOutcomeAt,
+    })),
     counts: matches.reduce(
       (acc, match) => ({ ...acc, [match.response]: (acc[match.response] ?? 0) + 1 }),
       { PENDING: 0, ACCEPTED: 0, DECLINED: 0, MAYBE_LATER: 0 },
     ),
+  };
+}
+
+/**
+ * The requester's own account of how a call to a matched donor went.
+ *
+ * Deliberately not open to staff — staff who ring a donor write a CallLog instead
+ * (callLogService.recordCall), which is a verified record from someone who called for a
+ * living, not a stranger's word. Mixing the two into one field would let an unverified
+ * report masquerade as a verified one. Available any time after the match exists, including
+ * after the request is closed — the requester usually only finds out whether a donor
+ * answered after the fact, which is exactly when they might come back to close it out.
+ */
+export async function recordRequesterCallOutcome(user, requestId, donorUserId, outcome) {
+  const request = await loadRequest(requestId);
+
+  if (request.requesterId !== user.id) {
+    throw ApiError.forbidden('FORBIDDEN', 'Only the person who posted this request can report how a call went.');
+  }
+
+  const match = await prisma.requestMatch.findUnique({
+    where: { requestId_donorUserId: { requestId, donorUserId } },
+  });
+  if (!match) {
+    throw ApiError.notFound('MATCH_NOT_FOUND', 'This donor was not matched to this request.');
+  }
+
+  const updated = await prisma.requestMatch.update({
+    where: { id: match.id },
+    data: { requesterCallOutcome: outcome, requesterCallOutcomeAt: new Date() },
+  });
+
+  return {
+    requesterCallOutcome: updated.requesterCallOutcome,
+    requesterCallOutcomeAt: updated.requesterCallOutcomeAt,
+    message: 'Thanks — that helps us know who to call next time.',
   };
 }
 

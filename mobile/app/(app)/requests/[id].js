@@ -17,10 +17,13 @@ import { getStoredUser } from '../../../services/auth';
 import { markNotificationRead } from '../../../services/notifications';
 import { getMe } from '../../../services/profile';
 import {
+  CALL_OUTCOME_OPTIONS,
   distancePhrase,
   expiryPhrase,
   getRequest,
   listMatches,
+  reportCallOutcome,
+  requestStatusLabel,
   respondToMatch,
   updateRequestStatus,
   urgencyLabel,
@@ -66,6 +69,7 @@ export default function RequestDetailScreen() {
   const [loadError, setLoadError] = useState(null);
   const [status, setStatus] = useState(null); // { message, tone }
   const [busy, setBusy] = useState(null); // 'ACCEPTED' | 'DECLINED' | 'CLOSING'
+  const [outcomeBusy, setOutcomeBusy] = useState(null); // { donorUserId, outcome }
   const announced = useRef(false);
 
   // Who I am, for `POST .../matches/:donorId/respond`. The cached copy avoids a round-trip
@@ -147,10 +151,9 @@ export default function RequestDetailScreen() {
     if (busy || !me?.id) return;
 
     setBusy(response);
-    setStatus({
-      message: response === 'ACCEPTED' ? 'Telling the hospital you can help…' : 'Sending your answer…',
-      tone: 'progress',
-    });
+    // Not a visible LiveMessage: the button being answered already shows its own busy
+    // loadingLabel, so this is only spoken here for a screen reader, not shown a second time.
+    say(response === 'ACCEPTED' ? 'Telling the hospital you can help…' : 'Sending your answer…');
 
     try {
       const result = await respondToMatch({ requestId: String(id), donorUserId: me.id, response });
@@ -178,11 +181,43 @@ export default function RequestDetailScreen() {
     }
   }
 
+  // Deliberately no LiveMessage/status banner on success — the button's own label change
+  // ("Picked up", highlighted) is the confirmation, and a screen-reader user hears it as
+  // part of the button's accessible name without a second announcement to interrupt them.
+  async function reportOutcome(donorUserId, outcome) {
+    if (outcomeBusy) return;
+
+    setOutcomeBusy({ donorUserId, outcome });
+
+    try {
+      const result = await reportCallOutcome({ requestId: String(id), donorUserId, outcome });
+      setMatches((current) =>
+        current.map((match) =>
+          match.donorUserId === donorUserId
+            ? {
+                ...match,
+                requesterCallOutcome: result.requesterCallOutcome,
+                requesterCallOutcomeAt: result.requesterCallOutcomeAt,
+              }
+            : match,
+        ),
+      );
+      hapticSuccess();
+    } catch (error) {
+      hapticError();
+      say(`That was not saved. ${error.message}`);
+    } finally {
+      setOutcomeBusy(null);
+    }
+  }
+
   async function close(nextStatus) {
     if (busy) return;
 
     setBusy('CLOSING');
-    setStatus({ message: 'Closing this request…', tone: 'progress' });
+    // Not a visible LiveMessage: the Close button's own loadingLabel already says this on
+    // screen, so it is only spoken here for a screen reader, not shown a second time.
+    say('Closing this request…');
 
     try {
       const result = await updateRequestStatus(String(id), nextStatus);
@@ -351,17 +386,27 @@ export default function RequestDetailScreen() {
         </Card>
       ) : null}
 
-      {/* --- Contact, once it is unlocked ---------------------------------- */}
+      {/* --- Contact, once it is unlocked ----------------------------------
+          The number itself is shown as text only to the requester (and staff) reading back
+          the contact they themselves supplied — for anyone else, a donor included, it is
+          never rendered or spoken, only dialled. See DonorCard for the matching rule on the
+          requester's side. */}
 
       {request.contactPhone ? (
         <Card title="Who to call">
-          <AppText variant="body" style={styles.answer}>
-            {formatPhoneForDisplay(request.contactPhone)}
-          </AppText>
+          {data.canUpdateStatus ? (
+            <AppText variant="body" style={styles.answer}>
+              {formatPhoneForDisplay(request.contactPhone)}
+            </AppText>
+          ) : null}
           <AppButton
             title="Call the hospital contact"
             onPress={() => callNumber(request.contactPhone, { name: request.hospitalName })}
-            accessibilityLabel={`Call the hospital contact, ${formatPhoneForSpeech(request.contactPhone)}`}
+            accessibilityLabel={
+              data.canUpdateStatus
+                ? `Call the hospital contact, ${formatPhoneForSpeech(request.contactPhone)}`
+                : 'Call the hospital contact'
+            }
             accessibilityHint="Opens your phone's dialler with this number"
           />
         </Card>
@@ -385,10 +430,16 @@ export default function RequestDetailScreen() {
 
           {matches?.map((match) =>
             match.donor ? (
-              <DonorCard
-                key={match.id}
-                donor={{ ...match.donor, distanceKm: match.distanceKm }}
-              />
+              <View key={match.id} style={styles.matchBlock}>
+                <DonorCard donor={{ ...match.donor, distanceKm: match.distanceKm }} />
+                <CallOutcomeRow
+                  donorName={match.donor.name || 'this donor'}
+                  outcome={match.requesterCallOutcome}
+                  busyOutcome={outcomeBusy?.donorUserId === match.donorUserId ? outcomeBusy.outcome : null}
+                  disabled={Boolean(outcomeBusy) && outcomeBusy.donorUserId !== match.donorUserId}
+                  onSelect={(outcome) => reportOutcome(match.donorUserId, outcome)}
+                />
+              </View>
             ) : null,
           )}
 
@@ -453,21 +504,50 @@ function spokenSummary(request) {
 
 /** The status as a word, never as a colour. */
 function statusText(request) {
-  switch (request.status) {
-    case 'OPEN':
-      return 'Open';
-    case 'FULFILLED':
-      return 'Fulfilled';
-    case 'CANCELLED':
-      return 'Cancelled';
-    case 'EXPIRED':
-      return 'Expired';
-    default:
-      return request.status;
-  }
+  return requestStatusLabel(request.status);
 }
 
 const capitalise = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+
+/**
+ * "Did you reach them?" — the requester's own report, one call, one answer.
+ *
+ * Optional and low-pressure on purpose: no LiveMessage nags for it, nothing blocks on it,
+ * and it stays answerable any time, including after the request is closed. Whichever option
+ * is currently on record shows as the filled button; the other two stay outlined, the same
+ * selected/unselected convention CALL_OUTCOME_OPTIONS' CRM counterpart uses.
+ */
+function CallOutcomeRow({ donorName, outcome, busyOutcome, disabled, onSelect }) {
+  return (
+    <View style={styles.outcomeRow}>
+      <AppText variant="caption" color={colors.textMuted} style={styles.outcomeLabel}>
+        Did you reach {donorName}?
+      </AppText>
+      <View style={styles.outcomeButtons}>
+        {CALL_OUTCOME_OPTIONS.map((option) => {
+          const selected = outcome === option.value;
+          return (
+            <AppButton
+              key={option.value}
+              title={option.label}
+              variant={selected ? 'primary' : 'secondary'}
+              size="small"
+              fullWidth={false}
+              loading={busyOutcome === option.value}
+              loadingLabel="Saving"
+              disabled={disabled}
+              onPress={() => onSelect(option.value)}
+              accessibilityLabel={
+                selected ? `${option.label}, for ${donorName}. Currently selected.` : `${option.label}, for ${donorName}`
+              }
+              style={styles.outcomeButton}
+            />
+          );
+        })}
+      </View>
+    </View>
+  );
+}
 
 function Fact({ label, value }) {
   return (
@@ -492,4 +572,12 @@ const styles = StyleSheet.create({
   action: { marginBottom: spacing.md },
   sectionHeading: { marginTop: spacing.sm, marginBottom: spacing.xs },
   sectionNote: { marginBottom: spacing.lg },
+  matchBlock: { marginBottom: spacing.lg },
+  outcomeRow: {
+    marginTop: -spacing.md,
+    paddingHorizontal: spacing.xs,
+  },
+  outcomeLabel: { marginBottom: spacing.sm },
+  outcomeButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  outcomeButton: { paddingHorizontal: spacing.md },
 });

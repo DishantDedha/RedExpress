@@ -4,10 +4,12 @@ import { maskPhone } from '../utils/phone.js';
 import {
   completePhoneLogin,
   completeWidgetLogin,
+  loginWithPassword,
   publicUser,
   refreshAccessToken,
   requestPasswordReset,
   resetPassword,
+  setPassword,
   staffLogin,
   startPhoneLogin,
 } from '../services/authService.js';
@@ -41,6 +43,17 @@ export const verifyOtpHandler = asyncHandler(async (req, res) => {
  */
 export const verifyWidgetHandler = asyncHandler(async (req, res) => {
   const result = await completeWidgetLogin(req.body);
+  res.status(200).json(result);
+});
+
+export const loginHandler = asyncHandler(async (req, res) => {
+  const result = await loginWithPassword(req.body);
+  res.status(200).json(result);
+});
+
+/** POST /auth/password/set — requireAuth has already proven who is asking. */
+export const setPasswordHandler = asyncHandler(async (req, res) => {
+  const result = await setPassword(req.user, req.body);
   res.status(200).json(result);
 });
 

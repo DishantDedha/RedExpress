@@ -11,6 +11,7 @@ import { pagination } from './searchSchemas.js';
 const URGENCIES = ['NORMAL', 'URGENT', 'CRITICAL'];
 const STATUSES = ['OPEN', 'FULFILLED', 'CANCELLED', 'EXPIRED'];
 const RESPONSES = ['PENDING', 'ACCEPTED', 'DECLINED', 'MAYBE_LATER'];
+const REQUESTER_CALL_OUTCOMES = ['PICKED_UP', 'NO_ANSWER', 'WRONG_NUMBER'];
 
 function upperEnum(values, message) {
   return z.preprocess(
@@ -116,4 +117,9 @@ export const respondToMatchSchema = z.object({
   // commit nor rule themselves out yet, kept distinct from DECLINED so staff can tell
   // "no" from "not yet" on the worklist.
   response: upperEnum(['ACCEPTED', 'DECLINED', 'MAYBE_LATER'], 'Choose whether you can donate.'),
+});
+
+/** The requester's own report of how their call to a matched donor went. */
+export const requesterCallOutcomeSchema = z.object({
+  outcome: upperEnum(REQUESTER_CALL_OUTCOMES, 'Choose what happened when you called.'),
 });

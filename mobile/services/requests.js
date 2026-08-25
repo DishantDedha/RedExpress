@@ -82,6 +82,25 @@ export function listMatches(id) {
   return api.get(`/requests/${encodeURIComponent(id)}/matches`);
 }
 
+/**
+ * The requester's own account of how their call to a matched donor went — a soft,
+ * self-reported signal, distinct from anything staff record. Only the request's author may
+ * call this; it exists any time after the match is created, including after the request is
+ * closed, since that is usually when a requester finds out whether someone answered.
+ */
+export function reportCallOutcome({ requestId, donorUserId, outcome }) {
+  return api.post(
+    `/requests/${encodeURIComponent(requestId)}/matches/${encodeURIComponent(donorUserId)}/call-outcome`,
+    { outcome },
+  );
+}
+
+export const CALL_OUTCOME_OPTIONS = [
+  { value: 'PICKED_UP', label: 'Picked up' },
+  { value: 'NO_ANSWER', label: 'No answer' },
+  { value: 'WRONG_NUMBER', label: 'Wrong number' },
+];
+
 // ---------------------------------------------------------------------------
 // Display helpers
 // ---------------------------------------------------------------------------
@@ -101,6 +120,36 @@ export const URGENCY_OPTIONS = [
 
 export function urgencyLabel(value) {
   return URGENCY_OPTIONS.find((option) => option.value === value)?.label ?? 'Normal';
+}
+
+/** The status as a word, never as a colour — see the Chip component for why. */
+export function requestStatusLabel(status) {
+  switch (status) {
+    case 'OPEN':
+      return 'Open';
+    case 'FULFILLED':
+      return 'Fulfilled';
+    case 'CANCELLED':
+      return 'Cancelled';
+    case 'EXPIRED':
+      return 'Expired';
+    default:
+      return status;
+  }
+}
+
+/** The colour is a supplement to the word above, never a substitute for it. */
+export function requestStatusTone(status) {
+  switch (status) {
+    case 'OPEN':
+      return 'tint';
+    case 'FULFILLED':
+      return 'success';
+    case 'EXPIRED':
+      return 'warning';
+    default:
+      return 'neutral';
+  }
 }
 
 /**

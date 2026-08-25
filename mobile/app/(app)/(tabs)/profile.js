@@ -222,7 +222,9 @@ export default function ProfileScreen() {
     }
 
     setSaving(true);
-    setStatus({ message: 'Saving your changes…', tone: 'progress' });
+    // Not a visible LiveMessage: the Save button's own loadingLabel already says this on
+    // screen, so it is only spoken here for a screen reader, not shown a second time.
+    say('Saving your changes…');
 
     try {
       const result = await updateDonorProfile({

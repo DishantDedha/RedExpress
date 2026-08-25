@@ -33,7 +33,13 @@ function requireBothCoordinates(schema) {
   );
 }
 
-/** A password is only stored when it is confirmed. */
+/**
+ * A password is only stored when it is confirmed.
+ *
+ * Registration always sends both fields (password is required there), so the `!data.password`
+ * escape only matters for `donorUpdateSchema`, where changing the password is optional and
+ * every other field is too.
+ */
 function requireMatchingConfirmation(schema) {
   return schema.refine((data) => !data.password || data.password === data.confirmPassword, {
     message: 'Passwords do not match.',
@@ -65,9 +71,10 @@ const donorRegisterFields = {
   latitude: latitude.optional(),
   longitude: longitude.optional(),
 
-  // App accounts sign in by OTP, so this is genuinely optional.
-  password: password.optional(),
-  confirmPassword: z.string().optional(),
+  // The account's sign-in credential. OTP is only for proving the phone number now — at
+  // registration (here) and again if staff ever mark the account unreachable.
+  password,
+  confirmPassword: z.string({ required_error: 'Confirm your password.' }).min(1, 'Confirm your password.'),
 };
 
 export const donorRegisterSchema = requireMatchingConfirmation(
@@ -115,16 +122,23 @@ export const lastDonationSchema = z.object({
   date: z.union([lastDonationDate, z.null()]),
 });
 
-/** The lighter receiver form: enough to route a request, nothing more. */
-export const receiverRegisterSchema = requireBothCoordinates(
-  z.object({
-    fullName: requiredText('your full name', { min: 2, max: 80 }),
-    state: requiredText('your state', { max: 80 }),
-    district: requiredText('your district', { max: 80 }),
-    city: optionalText('your city', { max: 80 }),
-    email: email.optional(),
-    phone: optionalText('a mobile number', { min: 8, max: 20 }),
-    latitude: latitude.optional(),
-    longitude: longitude.optional(),
-  }),
+/**
+ * The lighter receiver form: enough to route a request, plus the same sign-in credential the
+ * donor form collects — a receiver logs back in with phone + password too.
+ */
+export const receiverRegisterSchema = requireMatchingConfirmation(
+  requireBothCoordinates(
+    z.object({
+      fullName: requiredText('your full name', { min: 2, max: 80 }),
+      state: requiredText('your state', { max: 80 }),
+      district: requiredText('your district', { max: 80 }),
+      city: optionalText('your city', { max: 80 }),
+      email: email.optional(),
+      phone: optionalText('a mobile number', { min: 8, max: 20 }),
+      latitude: latitude.optional(),
+      longitude: longitude.optional(),
+      password,
+      confirmPassword: z.string({ required_error: 'Confirm your password.' }).min(1, 'Confirm your password.'),
+    }),
+  ),
 );

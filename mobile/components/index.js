@@ -27,6 +27,7 @@ export { PhotoPicker } from './PhotoPicker';
 export { LocationCapture } from './LocationCapture';
 export { DictationButton } from './DictationButton';
 export { ScreenHeader } from './ScreenHeader';
+export { HeaderBackButton } from './HeaderBackButton';
 export { Card } from './Card';
 export { DonorCard } from './DonorCard';
 export { PushConsent } from './PushConsent';

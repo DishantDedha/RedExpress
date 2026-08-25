@@ -1,6 +1,6 @@
 import { api } from './apiClient';
 import { logger } from './logger';
-import { getCachedUser, saveSession } from './tokenStorage';
+import { getAccessToken, getCachedUser, getRefreshToken, saveSession } from './tokenStorage';
 import {
   sendOtp as sendWidgetOtp,
   verifyOtp as verifyWidgetOtp,
@@ -78,7 +78,7 @@ export async function requestOtp(phone) {
  *
  * @returns the backend payload plus `next`, the route to land on.
  */
-export async function verifyOtp({ phone, code, role = 'DONOR', mode = 'login' }) {
+export async function verifyOtp({ phone, code, role = 'DONOR', mode = 'reactivate' }) {
   // Two ways in, one result. On the widget path MSG91 checks the code and the backend trades
   // the resulting token for a session; on the fallback path the backend checks the code
   // itself. Both endpoints return the same payload, so nothing below this line differs — and
@@ -115,21 +115,67 @@ export async function verifyOtp({ phone, code, role = 'DONOR', mode = 'login' })
  * before any form is filled in. Sending someone with a bare account to the home screen would
  * show them an empty shell.
  *
- * The awkward case is someone who taps "Login", is new, and therefore has no role of their
- * own yet. They are sent to the type chooser rather than being guessed at: the account has
- * been created as a donor by default, and quietly committing them to that is worse than
- * asking. `/register` detects the live session and goes straight to the right form.
+ * A completed profile with no password (`passwordSet: false`) is the other case OTP alone
+ * cannot finish signing in: an account that predates the password requirement, or one
+ * recovering a forgotten password. It goes to `/set-password` rather than `/home` because
+ * password is now the only everyday way back in — leaving without setting one would strand
+ * them at the next sign-in.
+ *
+ * The awkward case is someone who registers and is new, and therefore has no role of their
+ * own yet — this only reaches here via `mode === 'register'`, so `role` is always known too.
  */
-function routeAfterVerify({ profileComplete, isNewUser, user, mode, role }) {
-  if (profileComplete) return '/home';
-
+function routeAfterVerify({ profileComplete, isNewUser, passwordSet, user, mode, role }) {
   if (mode === 'register' && role) {
     return role === 'RECEIVER' ? '/receiver-form' : '/donor-form';
   }
 
-  if (isNewUser) return '/register';
+  if (!profileComplete) {
+    // Reached e.g. by "Login" against a number Red Express has never seen — the account was
+    // just created by the OTP verify above, but nobody has chosen donor vs. receiver yet.
+    if (isNewUser) return '/register';
+    return user?.role === 'RECEIVER' ? '/receiver-form' : '/donor-form';
+  }
 
-  return user?.role === 'RECEIVER' ? '/receiver-form' : '/donor-form';
+  if (!passwordSet) return '/set-password';
+
+  return '/home';
+}
+
+/**
+ * Sign-in with phone + password — the everyday way in now that OTP is reserved for proving a
+ * phone number rather than for signing in itself.
+ *
+ * Three outcomes the login screen has to branch on come back as `error.code`, not as this
+ * function's return value, because they are not "signed in": `PHONE_REVERIFICATION_REQUIRED`
+ * (the account was marked unreachable and needs an OTP re-verify), `PASSWORD_NOT_SET` (a
+ * pre-password account, or a genuinely forgotten one — same fix, verify and set a new one),
+ * and the plain `INVALID_CREDENTIALS` wrong-phone-or-password case.
+ */
+export async function loginWithPassword({ phone, password }) {
+  const result = await api.post('/auth/login', { phone, password }, { auth: false });
+
+  await saveSession({
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+    user: result.user,
+  });
+
+  return result;
+}
+
+/**
+ * Sets the password on the current session's account — the second half of both the
+ * "never had one" and "forgot it" paths, once an OTP has freshly verified the phone. The
+ * cached user is refreshed so a stale `hasPassword` flag never lingers.
+ */
+export async function setPassword({ password, confirmPassword }) {
+  const result = await api.post('/auth/password/set', { password, confirmPassword });
+  await saveSession({
+    accessToken: await getAccessToken(),
+    refreshToken: await getRefreshToken(),
+    user: result.user,
+  });
+  return result;
 }
 
 /** The signed-in user as last seen, without a network call. Null when signed out. */

@@ -112,9 +112,9 @@ export default function RegisterScreen() {
             variant="link"
             size="small"
             fullWidth={false}
-            onPress={() => router.push({ pathname: '/phone', params: { mode: 'login' } })}
+            onPress={() => router.push('/login')}
             accessibilityLabel="Login here"
-            accessibilityHint="Sign in with your registered mobile number"
+            accessibilityHint="Sign in with your mobile number and password"
           />
         </View>
       ) : null}

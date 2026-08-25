@@ -96,14 +96,14 @@ export default function LandingScreen() {
       <SectionHeading
         overline="GET STARTED"
         title="Ready when you are"
-        description="Sign in with your mobile number, or create an account in under a minute."
+        description="Sign in with your mobile number and password, or create an account in under a minute."
       />
 
       <AppButton
         title="Login"
         size="large"
-        onPress={() => router.push({ pathname: '/phone', params: { mode: 'login' } })}
-        accessibilityHint="Sign in with your registered mobile number"
+        onPress={() => router.push('/login')}
+        accessibilityHint="Sign in with your mobile number and password"
         style={styles.action}
       />
 

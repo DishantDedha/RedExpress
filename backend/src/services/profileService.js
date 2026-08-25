@@ -377,6 +377,7 @@ export async function registerReceiver(user, input) {
   assertPhoneMatches(user, input.phone);
 
   const hasDonorProfile = Boolean(await prisma.donorProfile.findUnique({ where: { userId: user.id } }));
+  const passwordHash = await hashIfPresent(input.password);
 
   try {
     const updated = await prisma.user.update({
@@ -385,6 +386,7 @@ export async function registerReceiver(user, input) {
         name: input.fullName,
         ...(input.email !== undefined ? { email: input.email } : {}),
         ...(hasDonorProfile ? {} : { role: 'RECEIVER' }),
+        ...(passwordHash ? { passwordHash } : {}),
         state: input.state,
         district: input.district,
         city: input.city ?? null,

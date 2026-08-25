@@ -58,6 +58,33 @@ export const staffLoginSchema = z.object({
   password: z.string({ required_error: 'Enter your password.' }).min(1, 'Enter your password.'),
 });
 
+/**
+ * App users — phone + password. Deliberately not the stricter `password` schema from
+ * common.js (min 8, max 128): tightening what counts as a valid password belongs at the
+ * point it is set, not at the point it is typed back in. Loosening the login check would
+ * reject nobody who could otherwise sign in.
+ */
+export const loginSchema = z.object({
+  phone,
+  password: z.string({ required_error: 'Enter your password.' }).min(1, 'Enter your password.'),
+});
+
+/**
+ * Sets a password on the caller's own account — used right after an OTP verification that
+ * did not already come with one: a fresh registration, or an existing account that predates
+ * the password requirement. requireAuth has already proven who is asking; there is no
+ * "current password" to check because getting here at all required proving the phone.
+ */
+export const setPasswordSchema = z
+  .object({
+    password,
+    confirmPassword: z.string({ required_error: 'Confirm your password.' }).min(1, 'Confirm your password.'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match.',
+    path: ['confirmPassword'],
+  });
+
 export const forgotPasswordSchema = z.object({
   email: z
     .string({ required_error: 'Enter your email address.' })

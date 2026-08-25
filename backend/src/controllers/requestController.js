@@ -4,6 +4,7 @@ import {
   getRequest,
   listMatches,
   listRequests,
+  recordRequesterCallOutcome,
   respondToMatch,
   updateRequestStatus,
 } from '../services/requestService.js';
@@ -32,4 +33,10 @@ export const listMatchesHandler = asyncHandler(async (req, res) => {
 
 export const respondToMatchHandler = asyncHandler(async (req, res) => {
   res.status(200).json(await respondToMatch(req.user, req.params.id, req.params.donorId, req.body.response));
+});
+
+export const recordRequesterCallOutcomeHandler = asyncHandler(async (req, res) => {
+  res
+    .status(200)
+    .json(await recordRequesterCallOutcome(req.user, req.params.id, req.params.donorId, req.body.outcome));
 });

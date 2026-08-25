@@ -187,11 +187,10 @@ export default function DonorFormScreen() {
       ['otherCity', () => (cityIsOther ? required(values.otherCity, 'Enter your city or town.') : null)],
       ['pincode', () => checkPincode(values.pincode)],
       ['address', () => required(values.address, 'Enter your address.')],
-      ['password', () => checkPassword(values.password)],
+      ['password', () => checkPassword(values.password, { optional: false })],
       [
         'confirmPassword',
         () => {
-          if (!values.password) return null;
           if (!values.confirmPassword) return 'Confirm your password.';
           return values.password === values.confirmPassword ? null : 'Passwords do not match.';
         },
@@ -208,7 +207,9 @@ export default function DonorFormScreen() {
 
     setErrors({});
     setSubmitting(true);
-    setStatus({ message: 'Creating your donor account…', tone: 'progress' });
+    // Not a visible LiveMessage: the button's own loadingLabel already says this on screen,
+    // so it is only spoken here for a screen reader, not shown a second time.
+    say('Creating your donor account…');
 
     try {
       const result = await registerDonor({
@@ -227,8 +228,8 @@ export default function DonorFormScreen() {
         address: values.address.trim(),
         latitude: coords?.latitude,
         longitude: coords?.longitude,
-        password: values.password || undefined,
-        confirmPassword: values.password ? values.confirmPassword : undefined,
+        password: values.password,
+        confirmPassword: values.confirmPassword,
       });
 
       hapticSuccess();
@@ -276,7 +277,7 @@ export default function DonorFormScreen() {
           title="Register as a Donor"
           subtitle="Register today to become a lifesaving blood donor for patients."
           tone="brand"
-          voicePurpose="A form in three parts: your details, where you live, and a password if you want one. Only the marked fields are required."
+          voicePurpose="A form in three parts: your details, where you live, and a password to sign in with. Only the marked fields are required."
           voiceAction="Create account"
         />
       }
@@ -380,7 +381,7 @@ export default function DonorFormScreen() {
           value={values.dateOfBirth}
           onChange={(value) => set('dateOfBirth', value)}
           error={errors.dateOfBirth}
-          helperText={`Optional. Donors must be between ${MIN_DONOR_AGE} and ${MAX_DONOR_AGE} years old.`}
+          helperText={`Optional.\nDonors must be between ${MIN_DONOR_AGE} and ${MAX_DONOR_AGE} years old.`}
         />
 
         <AppTextInput
@@ -509,13 +510,15 @@ export default function DonorFormScreen() {
 
       <Card title="Security">
         <AppText variant="body" color={colors.textMuted} style={styles.sectionNote}>
-          Optional. You sign in with a one time password sent to your mobile, so a password is
-          only useful if you would rather not wait for a text.
+          This is how you sign in from now on — your mobile number and this password. We only
+          text a one time password to verify your number, at registration and if you ever need
+          to prove it again.
         </AppText>
 
         <AppTextInput
           ref={refs.password}
           label="Password"
+          required
           value={values.password}
           onChangeText={(text) => set('password', text)}
           error={errors.password}
@@ -523,12 +526,13 @@ export default function DonorFormScreen() {
           autoComplete="new-password"
           textContentType="newPassword"
           autoCapitalize="none"
-          helperText="At least 8 characters. Leave blank to sign in by one time password only."
+          helperText="At least 8 characters."
         />
 
         <AppTextInput
           ref={refs.confirmPassword}
           label="Confirm password"
+          required
           value={values.confirmPassword}
           onChangeText={(text) => set('confirmPassword', text)}
           error={errors.confirmPassword}
@@ -575,8 +579,8 @@ export default function DonorFormScreen() {
           variant="link"
           size="small"
           fullWidth={false}
-          onPress={() => router.replace({ pathname: '/phone', params: { mode: 'login' } })}
-          accessibilityHint="Leaves this form and signs you in with your mobile number"
+          onPress={() => router.replace('/login')}
+          accessibilityHint="Leaves this form and signs you in with your mobile number and password"
         />
       </View>
     </Screen>

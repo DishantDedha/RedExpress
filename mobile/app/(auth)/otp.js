@@ -64,7 +64,7 @@ export default function OtpScreen() {
   const codeRef = useRef(null);
 
   const params = useLocalSearchParams();
-  const mode = params.mode ?? 'login';
+  const mode = params.mode ?? 'reactivate';
   const role = params.role ?? 'DONOR';
   const phone = params.phone ? String(params.phone) : '';
   const expiryMinutes = Math.round(Number(params.expiresInSeconds ?? 300) / 60);
@@ -100,7 +100,11 @@ export default function OtpScreen() {
 
       setError(null);
       setVerifying(true);
-      setStatus({ message: 'Checking your code…', tone: 'progress' });
+      // Not a visible LiveMessage: the Submit button already shows this as its busy label
+      // (loadingLabel below), so a second banner saying the same words would just be visual
+      // noise for a sighted user. Screen readers still need it said, since the button's own
+      // label change is not reliably announced on its own.
+      say('Checking your code…');
 
       try {
         const result = await verifyOtp({ phone, code: value, role, mode });
@@ -115,7 +119,9 @@ export default function OtpScreen() {
         say(
           result.reactivated
             ? 'Verified. Welcome back, you are on the donor list again.'
-            : 'Verified.',
+            : result.next === '/set-password'
+              ? 'Verified. Now set a password for your account.'
+              : 'Verified.',
         );
 
         router.replace(result.next);
@@ -143,7 +149,9 @@ export default function OtpScreen() {
 
     setError(null);
     setResending(true);
-    setStatus({ message: 'Sending a new code…', tone: 'progress' });
+    // See the note in handleVerify: the Resend button's own loadingLabel already carries this
+    // visually, so it is only spoken here, not shown a second time.
+    say('Sending a new code…');
 
     try {
       await requestOtp(phone);
@@ -210,7 +218,9 @@ export default function OtpScreen() {
                 ? `Enter all ${OTP_LENGTH_WORD} digits to continue`
                 : mode === 'register'
                   ? 'Checks your code and continues to the registration form'
-                  : 'Checks your code and signs you in'
+                  : mode === 'set-password'
+                    ? 'Checks your code so you can set a password'
+                    : 'Checks your code and signs you in'
             }
           />
           <InitiativeFooter />

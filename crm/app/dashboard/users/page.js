@@ -6,7 +6,7 @@ import Pagination from '@/components/ui/Pagination';
 import StatusBadge from '@/components/ui/StatusBadge';
 import BloodGroup from '@/components/ui/BloodGroup';
 import PhoneLink from '@/components/ui/PhoneLink';
-import { AvailabilityBadge } from '@/components/ui/Badge';
+import { AvailabilityBadge, ReliabilityBadge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/States';
 import { LastCallCell } from '@/components/CallHistory';
 import { apiGet } from '@/lib/session';
@@ -166,6 +166,7 @@ const COLUMNS = [
       <div className="space-y-1">
         <StatusBadge status={row.status} showHint />
         {row.role === 'DONOR' ? <AvailabilityBadge availabilityStatus={row.availabilityStatus} /> : null}
+        {row.role === 'DONOR' ? <ReliabilityBadge reliability={row.reliability} /> : null}
       </div>
     ),
   },

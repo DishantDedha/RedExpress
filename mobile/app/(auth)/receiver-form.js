@@ -19,7 +19,7 @@ import { getStoredUser } from '../../services/auth';
 import { registerReceiver } from '../../services/profile';
 import { hapticSuccess } from '../../services/feedback';
 import { formatPhoneForDisplay } from '../../utils/phone';
-import { checkEmail, fieldErrorsFrom, reportErrors, required, validate } from '../../utils/form';
+import { checkEmail, checkPassword, fieldErrorsFrom, reportErrors, required, validate } from '../../utils/form';
 import { colors, spacing } from '../../theme';
 
 /**
@@ -48,6 +48,8 @@ export default function ReceiverFormScreen() {
     district: null,
     city: null,
     otherCity: '',
+    password: '',
+    confirmPassword: '',
   });
   const [coords, setCoords] = useState(null);
   const [phone, setPhone] = useState(params.phone ? String(params.phone) : '');
@@ -69,6 +71,8 @@ export default function ReceiverFormScreen() {
     district: useRef(null),
     city: useRef(null),
     otherCity: useRef(null),
+    password: useRef(null),
+    confirmPassword: useRef(null),
   };
 
   const districts = useMemo(() => districtsOf(values.state), [values.state]);
@@ -81,6 +85,8 @@ export default function ReceiverFormScreen() {
     district: 'District',
     city: 'City or town',
     otherCity: 'City or town name',
+    password: 'Password',
+    confirmPassword: 'Confirm password',
   };
 
   function set(field, value) {
@@ -108,6 +114,14 @@ export default function ReceiverFormScreen() {
       // City is optional on this form — the backend routes a request by district, and one
       // fewer required field matters when the person filling it in is in a hurry.
       ['otherCity', () => (cityIsOther ? required(values.otherCity, 'Enter your city or town.') : null)],
+      ['password', () => checkPassword(values.password, { optional: false })],
+      [
+        'confirmPassword',
+        () => {
+          if (!values.confirmPassword) return 'Confirm your password.';
+          return values.password === values.confirmPassword ? null : 'Passwords do not match.';
+        },
+      ],
     ]);
 
     if (Object.keys(found).length) {
@@ -119,7 +133,9 @@ export default function ReceiverFormScreen() {
 
     setErrors({});
     setSubmitting(true);
-    setStatus({ message: 'Setting up your account…', tone: 'progress' });
+    // Not a visible LiveMessage: the button's own loadingLabel already says this on screen,
+    // so it is only spoken here for a screen reader, not shown a second time.
+    say('Setting up your account…');
 
     try {
       const result = await registerReceiver({
@@ -131,6 +147,8 @@ export default function ReceiverFormScreen() {
         city: resolvedCity || undefined,
         latitude: coords?.latitude,
         longitude: coords?.longitude,
+        password: values.password,
+        confirmPassword: values.confirmPassword,
       });
 
       hapticSuccess();
@@ -289,6 +307,39 @@ export default function ReceiverFormScreen() {
 
         <LocationCapture value={coords} onChange={setCoords} disabled={submitting} />
       </Card>
+
+      <Card title="Security">
+        <AppText variant="body" color={colors.textMuted} style={styles.sectionNote}>
+          This is how you sign in from now on — your mobile number and this password.
+        </AppText>
+
+        <AppTextInput
+          ref={refs.password}
+          label="Password"
+          required
+          value={values.password}
+          onChangeText={(text) => set('password', text)}
+          error={errors.password}
+          secureTextEntry
+          autoComplete="new-password"
+          textContentType="newPassword"
+          autoCapitalize="none"
+          helperText="At least 8 characters."
+        />
+
+        <AppTextInput
+          ref={refs.confirmPassword}
+          label="Confirm password"
+          required
+          value={values.confirmPassword}
+          onChangeText={(text) => set('confirmPassword', text)}
+          error={errors.confirmPassword}
+          secureTextEntry
+          autoComplete="new-password"
+          textContentType="newPassword"
+          autoCapitalize="none"
+        />
+      </Card>
     </Screen>
   );
 }
@@ -296,4 +347,5 @@ export default function ReceiverFormScreen() {
 const styles = StyleSheet.create({
   readOnly: { marginBottom: spacing.lg, gap: spacing.xs },
   readOnlyValue: { marginTop: spacing.xs },
+  sectionNote: { marginBottom: spacing.lg },
 });

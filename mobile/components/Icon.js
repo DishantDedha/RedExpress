@@ -387,6 +387,49 @@ function List({ size, color }) {
   );
 }
 
+/** A heart: two circles fused to a rotated square base, the classic three-shape construction. */
+function Heart({ size, color }) {
+  const lobe = size * 0.44;
+
+  return (
+    <View style={styles.fill}>
+      <View
+        style={{
+          position: 'absolute',
+          top: size * 0.2,
+          left: size * 0.14,
+          width: lobe,
+          height: lobe,
+          borderRadius: lobe / 2,
+          backgroundColor: color,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          top: size * 0.2,
+          right: size * 0.14,
+          width: lobe,
+          height: lobe,
+          borderRadius: lobe / 2,
+          backgroundColor: color,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          top: size * 0.3,
+          width: size * 0.58,
+          height: size * 0.58,
+          backgroundColor: color,
+          borderRadius: size * 0.08,
+          transform: [{ rotate: '45deg' }],
+        }}
+      />
+    </View>
+  );
+}
+
 const GLYPHS = {
   drop: Drop,
   home: Home,
@@ -401,6 +444,7 @@ const GLYPHS = {
   shield: Shield,
   phone: Phone,
   list: List,
+  heart: Heart,
 };
 
 /** The names `Icon` will accept. Exported so a caller can be checked against it in review. */
