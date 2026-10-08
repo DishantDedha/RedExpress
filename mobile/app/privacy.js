@@ -68,13 +68,20 @@ export default function PrivacyScreen() {
   );
 
   return (
-    <Screen>
-      <ScreenHeader
-        title="Privacy and permissions"
-        subtitle="What Red Express knows about you, who can see it, and how to change it."
-        voicePurpose="This screen explains what information Red Express holds about you and who can see it."
-        voiceAction="Read what is collected, or open your phone settings to change a permission"
-      />
+    <Screen
+      bar={
+        <ScreenHeader
+          layout="bar"
+          title="Privacy and permissions"
+          back
+          voicePurpose="This screen explains what information Red Express holds about you and who can see it."
+          voiceAction="Read what is collected, or open your phone settings to change a permission"
+        />
+      }
+    >
+      <AppText variant="caption" color={colors.textMuted} style={styles.lead}>
+        What Red Express knows about you, who can see it, and how to change it.
+      </AppText>
 
       <LiveMessage message={note} tone="warning" />
 
@@ -282,6 +289,14 @@ function Permission({ label, status, granted, denied, blocked, disabled, last = 
 }
 
 const styles = StyleSheet.create({
+  /**
+   * The line that used to be the header's subtitle.
+   *
+   * GMP's screen bar holds a title and nothing else, so the sentence moved into the page as a
+   * lead paragraph. It is still read right after the heading and it is still one swipe away for
+   * a screen reader; it is just no longer 40px of white-on-red that pushes the content down.
+   */
+  lead: { marginBottom: spacing.xl },
   item: { marginBottom: spacing.lg },
   detail: { marginTop: spacing.xs },
   body: { marginBottom: spacing.lg },

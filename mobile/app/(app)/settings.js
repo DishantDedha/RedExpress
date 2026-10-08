@@ -91,13 +91,20 @@ export default function AccessibilitySettingsScreen() {
   }
 
   return (
-    <Screen>
-      <ScreenHeader
-        title="Accessibility"
-        subtitle="How Red Express looks and sounds. These settings are remembered."
-        voicePurpose="Change how Red Express looks and sounds."
-        voiceAction="Turn any setting on or off"
-      />
+    <Screen
+      bar={
+        <ScreenHeader
+          layout="bar"
+          title="Accessibility"
+          back
+          voicePurpose="Change how Red Express looks and sounds."
+          voiceAction="Turn any setting on or off"
+        />
+      }
+    >
+      <AppText variant="caption" color={colors.textMuted} style={styles.lead}>
+        How Red Express looks and sounds. These settings are remembered.
+      </AppText>
 
       <LiveMessage message={notice} tone="success" />
 
@@ -206,6 +213,14 @@ export default function AccessibilitySettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  /**
+   * The line that used to be the header's subtitle.
+   *
+   * GMP's screen bar holds a title and nothing else, so the sentence moved into the page as a
+   * lead paragraph. It is still read right after the heading and it is still one swipe away for
+   * a screen reader; it is just no longer 40px of white-on-red that pushes the content down.
+   */
+  lead: { marginBottom: spacing.xl },
   note: { marginTop: spacing.md },
   body: { marginBottom: spacing.lg },
   secondSwitch: { marginTop: spacing.md },

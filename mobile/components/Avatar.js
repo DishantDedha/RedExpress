@@ -1,6 +1,6 @@
 import { PixelRatio, StyleSheet, Text, View } from 'react-native';
 import { usePreferencesSnapshot } from '../hooks/usePreferences';
-import { colors, a11y } from '../theme';
+import { colors, fonts, a11y } from '../theme';
 
 /**
  * A circle with someone's initials in it.
@@ -49,7 +49,7 @@ export function initialsOf(name) {
 }
 
 const TONES = {
-  /** On a white surface. 8.51:1. */
+  /** On a white surface. 7.36:1. */
   tint: { bg: colors.primaryTint, fg: colors.primaryOnTint },
   /** On the red hero band, where a tinted circle would disappear into it. */
   onBrand: { bg: 'rgba(255, 255, 255, 0.2)', fg: colors.onPrimary },
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  initials: { textAlign: 'center', fontWeight: '700' },
+  initials: { textAlign: 'center', fontFamily: fonts.bold },
 });
 
 export default Avatar;

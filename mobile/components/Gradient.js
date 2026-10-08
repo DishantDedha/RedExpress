@@ -32,8 +32,14 @@ import { colors, highContrast } from '../theme';
  *
  * Collapses to a single flat fill. A user who turned this preference on to make text legible
  * is not helped by a background whose luminance slides underneath the caption they are
- * reading, and the flat fill (red700) puts white at 9.86:1 across the whole band rather than
- * 6.30:1 at its light end.
+ * reading, and the flat fill (the brand 800) puts white at 7.93:1 across the whole band
+ * rather than 5.98:1 at its light end.
+ *
+ * `flatColor` is what a ramp that is not the brand ramp collapses to. The bottom bar is
+ * near-black red, and flattening it to the brand 800 would turn the one piece of chrome
+ * visible on every screen a different colour the moment the preference went on — a change
+ * nobody asked for, in service of a contrast figure it already beat by a mile. It passes its
+ * own darkest stop instead.
  */
 
 const clamp = (n) => Math.max(0, Math.min(255, Math.round(n)));
@@ -76,6 +82,14 @@ export function Gradient({
    * corners stay filled at any angle.
    */
   angle = 0,
+  /**
+   * What this ramp flattens to under the high-contrast preference. Defaults to the measured
+   * brand fill, which is right for every band drawn from `colors.gradientBrand`.
+   *
+   * Whatever is passed has to clear the same bars the ramp's own stops do — it is a background
+   * text lands on, so it belongs in `scripts/check-contrast.mjs` like any other surface.
+   */
+  flatColor = highContrast.gradient,
   children,
   style,
   ...rest
@@ -84,7 +98,7 @@ export function Gradient({
 
   if (contrast.on) {
     return (
-      <View style={[styles.container, { backgroundColor: highContrast.gradient }, style]} {...rest}>
+      <View style={[styles.container, { backgroundColor: flatColor }, style]} {...rest}>
         {children}
       </View>
     );

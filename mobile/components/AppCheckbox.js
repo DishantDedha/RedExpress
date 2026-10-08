@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   },
   boxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
   boxError: { borderColor: colors.error },
-  boxDisabled: { borderColor: colors.borderDisabled, backgroundColor: colors.background },
+  boxDisabled: { borderColor: colors.borderDisabled, backgroundColor: colors.surface },
   tick: { lineHeight: 20 },
   labelBlock: { flex: 1 },
   helper: { marginTop: spacing.xs },

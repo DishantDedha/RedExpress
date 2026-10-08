@@ -2,9 +2,27 @@
  * The single source of design truth for the Red Express app.
  *
  * Every value here is a token, not a suggestion — components import from this file and
- * never hard-code a colour, a spacing step or a font size. That is what makes the Phase 11
- * accessibility pass (high-contrast mode, big-text preference) a change to one file rather
+ * never hard-code a colour, a spacing step or a font size. That is what makes the
+ * accessibility work (high-contrast mode, big-text preference) a change to one file rather
  * than a sweep through every screen.
+ *
+ * ## The palette is GMP's
+ *
+ * The scale below is the GMP storefront app's own brand ramp, value for value: #E02826 with
+ * its 50-900 tints, and the Tailwind neutral ramp beside it. Red Express and GMP are built by
+ * the same team and now read as one family — same red, same greys, same radii, same bottom
+ * bar, same two typefaces.
+ *
+ * Three tokens deliberately do *not* take GMP's value, and the reason is the same in all
+ * three cases: GMP has no contrast gate and these would not survive one.
+ *
+ *   textMuted   GMP captions are neutral-500 (#737373), which is 4.74:1 on white but drops
+ *               to 4.33:1 on the blush surfaces this app uses for whole sections. Red Express
+ *               takes neutral-600 instead, which is comfortable on all three.
+ *   border      An input outline must clear 3:1 (1.4.11). GMP outlines its fields in
+ *               neutral-200, which is 1.3:1 — a field edge you cannot see.
+ *   status      GMP's success green and warning amber are 3.3:1 and 3.6:1 as text. The
+ *               measured darker pair below is kept.
  *
  * ## Contrast
  *
@@ -28,77 +46,140 @@
  * ## No imports, ever
  *
  * `scripts/check-contrast.mjs` loads this file through a `data:` URL, which cannot resolve
- * relative specifiers. Adding an import here breaks the contrast gate.
+ * relative specifiers. Adding an import here breaks the contrast gate — which is also why
+ * the typography below names its families as plain strings, and the modules that supply them
+ * live in `theme/fonts.js`.
  */
 
 // ---------------------------------------------------------------------------
 // Colour
 // ---------------------------------------------------------------------------
 
+/**
+ * The brand ramp, straight from GMP's constants/tokens.ts.
+ *
+ * 600 is the brand red and the one every button, accent and active state resolves through.
+ * The 700-900 end is where the app's red *surfaces* live — the hero bands, the bottom bar —
+ * because a surface has to carry text, and white on 600 is 4.67:1 where white on 700 is
+ * 5.98:1 with room left over for a second, quieter line of copy on top of it.
+ */
+const brandRamp = {
+  50: '#FEF2F2',
+  100: '#FEE3E2',
+  200: '#FDCBCB',
+  300: '#FEBCBB',
+  400: '#F59592',
+  500: '#ED625E',
+  600: '#E02826', //  4.67:1 on white — the brand red. Fills and accents.
+  700: '#C31D1C', //  5.98:1 with white — the hero band's light end
+  800: '#A01918', //  7.93:1 with white (AAA) — pressed states, a red label on blush
+  900: '#7B1312', // 10.80:1 with white — the hero band's dark end
+};
+
+/** Tailwind's neutral ramp, as GMP uses it. */
+const neutralRamp = {
+  50: '#FAFAFA',
+  100: '#F5F5F5',
+  200: '#E5E5E5',
+  300: '#D4D4D4',
+  400: '#A3A3A3',
+  500: '#737373',
+  600: '#525252',
+  700: '#404040',
+  800: '#262626',
+  900: '#171717',
+};
+
 const palette = {
-  // Deep red. The brand colour, and dark enough to carry white text at 7.33:1 — a lighter,
-  // "friendlier" red would have failed AA and forced dark text on every button.
-  red600: '#B00020', // 7.33:1 on white — button fill, headings, focus ring
-  red700: '#8C0019', // 9.86:1 on white — pressed state
-  red800: '#8A0016', // 8.51:1 on redTint — text on a tinted surface
-  redTint: '#FDE7EB', // decorative fill behind red800 / red600 text
+  // --- Brand -------------------------------------------------------------
+  red600: brandRamp[600],
+  red700: brandRamp[700],
+  red800: brandRamp[800],
+  red900: brandRamp[900],
+  redTint: brandRamp[50],
 
   /**
    * The gradient ramp, light stop to dark stop.
    *
-   * Used for the brand hero on the landing and sign-in screens, and for the header band that
-   * replaced the old full-bleed red. Every stop is constrained by the same rule: white has
-   * to clear 4.5:1 on *all three*, because a caption may land anywhere along the ramp. The
-   * lightest stop is therefore the binding one, and it is measured rather than chosen by eye.
-   *
-   * red500 is the only value in this file lighter than red600. It exists so the gradient is
-   * actually visible — a ramp from red600 to red900 reads as a flat fill on a phone — and it
-   * is the reason `onBrandMuted` had to be lightened below.
+   * Used for the hero band at the top of a screen, and for the full-bleed brand screens in
+   * the sign-in flow. Every stop is constrained by the same rule: both white *and* the muted
+   * pink have to clear 4.5:1 on all three, because a caption may land anywhere along the
+   * ramp. The lightest stop is therefore the binding one, and it is why the band starts at
+   * 700 rather than at the brand red itself — on #E02826 the only AA foreground is pure
+   * white, and a band with no second voice has no hierarchy on it.
    */
-  red500: '#C2002E', //  6.30:1 with white — the lightest gradient stop
-  red900: '#6B0014', // 12.84:1 with white — the darkest gradient stop
+  gradientLight: brandRamp[700], //  5.98:1 with white, 4.93:1 with onBrandMuted
+  gradientDark: brandRamp[900], // 10.80:1 with white, 8.90:1 with onBrandMuted
 
   /**
-   * Text on the deep-red brand surface.
+   * The near-black red of the bottom bar, sampled off GMP's own bar art.
    *
-   * Lightened from the old #F6D4D9 when the gradient landed: that value measures 4.60:1 on
-   * red500, which passes AA by four hundredths and is not a margin worth shipping. #FFE9EC
-   * is 5.44:1 on the lightest stop and 6.32:1 on red600, so supporting copy is comfortably
-   * AA anywhere along the ramp.
+   * GMP bakes this into a PNG; here it is drawn by `<Gradient/>` from these two stops, which
+   * is the same picture without an asset to keep in sync with the palette.
    */
-  onBrandMuted: '#FFE9EC',
+  barLight: '#860901', // 10.20:1 with white
+  barDark: '#140100',
 
-  // Neutrals.
-  ink: '#1B1B1F', //  17.17:1 on white — body copy
-  inkMuted: '#5A5D66', //  6.58:1 on white — captions, helper text. Still AA: "muted" must
-  //                       never mean "unreadable".
-  inkDisabled: '#6B6F78', //  5.04:1 on white — disabled label. Disabled text is still text;
-  //                          it is dimmed by opacity elsewhere, never below AA here.
-  border: '#878A93', //  3.45:1 on white, 3.22:1 on surface — input outline. Picked to clear
-  //                     1.4.11's 3:1 on *both* backgrounds: a form field is not always
-  //                     inside a card, and the lighter grey that passed on white alone
-  //                     dropped to 2.95:1 straight on the screen.
-  borderMuted: '#C4C7CF', //  decorative divider only, never encloses an interactive control
-  borderDisabled: '#767A85', //  4.29:1 on white
-  surface: '#F7F7F9', //  screen background
-  card: '#FFFFFF', //  raised card background
+  /**
+   * Supporting copy on a red surface. GMP's own 100 tint, which measures 4.93:1 on the band's
+   * lightest stop — AA with margin rather than the four-hundredths kind.
+   */
+  onBrandMuted: brandRamp[100],
+
+  // --- Neutrals ----------------------------------------------------------
+  ink: neutralRamp[900], // 17.90:1 on white — body copy
+  /**
+   * Captions and helper text. GMP's neutral-600, not its neutral-500: see the note at the top
+   * of the file. 7.82:1 on white and 7.15:1 on blush, so "muted" never means "unreadable".
+   */
+  inkMuted: neutralRamp[600],
+  inkDisabled: '#757575', //  4.61:1 on white. Disabled text is still text; it is dimmed by
+  //                          opacity on top of this, never below AA here.
+  border: '#858585', //  3.69:1 on white, 3.37:1 on blush — input outline. GMP outlines its
+  //                     fields in neutral-200 (1.3:1); 1.4.11 wants 3:1 on *every* surface a
+  //                     field sits on, and this is the lightest grey that clears it on all of
+  //                     them.
+  borderMuted: neutralRamp[200], //  GMP's card edge, exactly. Decorative — never encloses an
+  //                                 interactive control.
+  borderDisabled: '#757575', //  4.61:1 on white
+  surface: neutralRamp[50], //  the quiet fill under a grouped list row
+  /**
+   * The page behind a list of full-bleed white blocks.
+   *
+   * GMP's list screens are not cards floating on white — they are a neutral-100 page with
+   * white blocks laid edge to edge and an 8px gutter of page showing between them. The gutter
+   * *is* the separator, which is why it needs a page colour you can actually see against
+   * white rather than the 50 used for an inset fill.
+   */
+  pageMuted: neutralRamp[100],
+  card: '#FFFFFF', //  card and screen background both. GMP's screens are white, and its cards
+  //                   are told apart by a neutral-200 edge rather than by a grey page behind
+  //                   them — which is most of why that app reads as crisp and this one read as
+  //                   muddy.
   white: '#FFFFFF',
 
   /**
-   * The blush surfaces.
+   * The blush surfaces — GMP's 50 and 100 tints.
    *
    * A white app with red controls is correct, and completely flat. These are the "red" half
    * of a white-and-red scheme doing the work a saturated fill cannot: they tint a section
-   * without becoming a background anyone has to read dark text off at low contrast. Both are
-   * measured — ink is 16.06:1 on blush, and body copy sits on it routinely.
+   * without becoming a background anyone has to read dark text off at low contrast.
+   *
+   * They come with one rule: a red label on blush is `primaryOnTint` (the 800), never
+   * `primary`. The brand red on its own 50 tint is 4.27:1.
    */
-  blush: '#FFF5F6', //  section tint — ink 16.06:1, red600 6.85:1
-  blushStrong: '#FDECEF', //  the pressed / selected state of a blush surface
-  blushLine: '#F3D7DC', //  decorative hairline on a blush surface, never around a control
+  blush: brandRamp[50], //  ink 16.10:1, primaryOnTint 7.36:1
+  blushStrong: brandRamp[100], //  the pressed / selected state of a blush surface
+  blushLine: brandRamp[200], //  decorative hairline on blush, never around a control
 };
 
 export const colors = {
   ...palette,
+
+  /** The 50-900 ramps, for the rare component that needs a step by name — the bottom bar's
+   *  active disc, a badge tint. Screens use the semantic aliases below. */
+  brandRamp,
+  neutralRamp,
 
   // Semantic aliases. Screens use these; the raw palette names above are for the theme file
   // and the contrast script.
@@ -111,14 +192,13 @@ export const colors = {
   /**
    * The brand surface: red, carrying white.
    *
-   * Still the token every red fill resolves through, but the surface it names is now a band
-   * at the top of a white screen rather than the whole screen — see `gradientBrand`. Its
-   * foreground pair is `onPrimary` (white) for anything that matters and `onBrandMuted` for
-   * supporting copy. Nothing from the light-surface set — `text`, `textMuted`, `border` —
+   * A band at the top of a white screen rather than the whole screen — see `gradientBrand`.
+   * Its foreground pair is `onPrimary` (white) for anything that matters and `onBrandMuted`
+   * for supporting copy. Nothing from the light-surface set — `text`, `textMuted`, `border` —
    * may be used on it; they are all dark, and all fail.
    */
-  brand: palette.red600,
-  brandPressed: palette.red700,
+  brand: palette.gradientLight,
+  brandPressed: palette.red800,
   brandDeep: palette.red900,
   onBrandMuted: palette.onBrandMuted,
 
@@ -127,17 +207,34 @@ export const colors = {
    * with stacked bands — the app has no native gradient dependency and is not gaining one
    * for the sake of decoration.
    */
-  gradientBrand: [palette.red500, palette.red600, palette.red900],
+  gradientBrand: [palette.gradientLight, palette.red800, palette.gradientDark],
 
-  background: palette.surface,
+  /** The bottom bar's slab. Near-black red, like GMP's. */
+  gradientBar: [palette.barLight, palette.barDark],
+
+  background: palette.card,
   text: palette.ink,
   textMuted: palette.inkMuted,
   textDisabled: palette.inkDisabled,
 
-  focusRing: palette.red600, // 7.33:1 on white, 6.85:1 on surface — well over the 3:1 floor
+  focusRing: palette.red600, // 4.67:1 on white, 4.27:1 on blush — over the 3:1 floor on both
+
+  /**
+   * A translucent panel on the red band — the quick-action tiles in the home header.
+   *
+   * Translucent rather than a flat tint so it sits in the gradient instead of cutting a
+   * rectangle out of it, which is how GMP's header tiles read. Its *contents* are white and
+   * are measured against the band underneath, not against this: the panel lightens whatever
+   * is behind it, so the stops already checked are the worst case.
+   */
+  brandPanel: 'rgba(255, 255, 255, 0.16)',
+  brandPanelPressed: 'rgba(255, 255, 255, 0.28)',
+  /** The hairline round a translucent panel, so it has an edge of its own on a flat band. */
+  brandPanelLine: 'rgba(255, 255, 255, 0.24)',
 
   // Status. Each one is paired with an icon and a word in the UI, because colour alone is
   // not allowed to carry the meaning (WCAG 1.4.1) and does not reach a blind user at all.
+  // These are *not* GMP's values — see the note at the top of the file.
   success: '#1B5E20', //  7.87:1 on white
   successTint: '#E6F4E7',
   error: '#B3261E', //  6.54:1 on white
@@ -149,23 +246,23 @@ export const colors = {
 };
 
 /**
- * The high-contrast preference (Phase 11).
+ * The high-contrast preference.
  *
  * Not a second theme — a set of substitutions applied on top of the one above, so there is
  * still exactly one palette to check and no chance of the two drifting apart.
  *
  * What it changes, and why each one:
  *
- *   muted text     `textMuted` is 6.58:1, which passes AA and is still hard work with reduced
- *                  contrast sensitivity or in direct sunlight. High contrast drops the
- *                  distinction entirely: helper text becomes body text at 17.17:1. The visual
+ *   muted text     `textMuted` is 7.82:1, which is comfortable and still hard work with
+ *                  reduced contrast sensitivity or in direct sunlight. High contrast drops the
+ *                  distinction entirely: helper text becomes body text at 17.90:1. The visual
  *                  hierarchy is carried by size and weight instead, which survives.
  *
- *   borders        A 3.45:1 input outline meets 1.4.11 and can still be genuinely hard to
+ *   borders        A 3.69:1 input outline meets 1.4.11 and can still be genuinely hard to
  *                  find. It becomes near-black, and one pixel wider — the edge of a control
  *                  is the thing you must see to know the control is there.
  *
- *   fills          The primary red darkens from 7.33:1 to 9.86:1 (AAA) and primary buttons
+ *   fills          The primary red darkens from 4.67:1 to 7.93:1 (AAA) and primary buttons
  *                  gain an outline, so a button reads as a button and not as a coloured
  *                  rectangle.
  *
@@ -180,28 +277,28 @@ export const highContrast = {
   /** Text colours, swapped by `AppText`. Both surfaces are covered: the light one and the
    *  brand red, where substituting dark ink would be catastrophic. */
   text: {
-    [palette.inkMuted]: palette.ink, //        6.58:1 → 17.17:1 on white
-    [palette.onBrandMuted]: palette.white, //  5.44:1 →  7.33:1 on red600
+    [palette.inkMuted]: palette.ink, //        7.82:1 → 17.90:1 on white
+    [palette.onBrandMuted]: palette.white, //  4.93:1 →  7.93:1 on the flattened band
     // `inkDisabled` is deliberately *not* here. Boosting disabled text to full contrast would
     // erase the only visual difference between a control that can be used and one that
     // cannot — high contrast should not cost a sighted user a state signal.
   },
   /** Non-text colours, applied by the components that draw edges and fills. */
-  border: palette.ink, //        17.17:1 on white — an unmissable outline
-  borderMuted: palette.border, //  3.45:1 — dividers and card edges become real borders
-  primary: palette.red700, //      9.86:1 on white (AAA) — button and chip fills
-  /** The flat fill a gradient collapses to. red700, so white sits at 9.86:1 across the whole
-   *  band instead of 6.30:1 at its light end. */
-  gradient: palette.red700,
-  borderWidth: 2, //               resting width for a control outline (normally 1)
-  focusWidth: 3, //                width when focused or in error (normally 2)
+  border: palette.ink, //          17.90:1 on white — an unmissable outline
+  borderMuted: palette.border, //   3.69:1 — dividers and card edges become real borders
+  primary: palette.red800, //       7.93:1 on white (AAA) — button and chip fills
+  /** The flat fill a gradient collapses to. The 800, so white sits at 7.93:1 across the whole
+   *  band instead of 5.98:1 at its light end. */
+  gradient: palette.red800,
+  borderWidth: 2, //                resting width for a control outline (normally 1)
+  focusWidth: 3, //                 width when focused or in error (normally 2)
 };
 
 // ---------------------------------------------------------------------------
 // Spacing, radius, elevation
 // ---------------------------------------------------------------------------
 
-/** 4pt grid. Generous by default — the mockups are airy and it helps low-vision users. */
+/** 4pt grid, the same steps GMP's Tailwind theme extends with. */
 export const spacing = {
   xs: 4,
   sm: 8,
@@ -212,14 +309,23 @@ export const spacing = {
   xxxl: 48,
 };
 
+/**
+ * Radii, GMP's scale.
+ *
+ * The app is noticeably tighter than it was: cards were 20 and are now 16, buttons were 10
+ * and are now 8. That is the difference between "rounded rectangle" and the crisper geometry
+ * GMP's catalogue cards have.
+ */
 export const radius = {
-  sm: 6,
-  md: 10,
-  lg: 14,
-  /** Cards and action tiles. */
-  xl: 20,
-  /** The white sheet that tucks under a hero band. */
-  xxl: 28,
+  sm: 4,
+  md: 8,
+  lg: 12,
+  /** Cards, action tiles, image frames. GMP's rounded-xl. */
+  xl: 16,
+  /** The bottom bar's top corners, and the white sheet that tucks under a hero band. */
+  xxl: 26,
+  /** The deeper curve on the sign-in sheet, where the sheet is most of the screen. */
+  sheet: 40,
   pill: 999,
 };
 
@@ -230,35 +336,38 @@ export const radius = {
  * border, so the edge survives on Android with elevation off, under "remove animations", and
  * in high-contrast mode. A card whose only boundary is a shadow has no boundary at all for a
  * large share of the people using this app.
+ *
+ * Lighter than it was, to match GMP, whose cards are held by a neutral-200 line with the
+ * shadow barely there behind it rather than by the shadow itself.
  */
 export const elevation = {
   sm: {
     shadowColor: '#000000',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
     shadowOffset: { width: 0, height: 1 },
     elevation: 1,
   },
   md: {
     shadowColor: '#000000',
-    shadowOpacity: 0.07,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   lg: {
     shadowColor: '#000000',
-    shadowOpacity: 0.1,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 6,
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
   },
   /** For a surface sitting on red, where a black shadow reads as mud. */
   brand: {
     shadowColor: '#4D000E',
-    shadowOpacity: 0.28,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.26,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
     elevation: 5,
   },
 };
@@ -268,25 +377,62 @@ export const elevation = {
 // ---------------------------------------------------------------------------
 
 /**
- * lineHeight is a multiple of fontSize rather than a fixed number, so it scales with the
- * user's font setting instead of clipping descenders at large sizes.
+ * The two families, named as strings.
+ *
+ * GMP's pair: Poppins for the whole interface, Playfair Display for the display sizes and the
+ * uppercase section titles. Running on the platform system font is the single biggest reason
+ * a screenshot of this app never looked like one of GMP's beside it.
+ *
+ * Every weight is its own family rather than a `fontWeight` on one. React Native cannot
+ * synthesise a weight from a single-weight family the way a browser can: ask for
+ * `fontWeight: '700'` on Poppins_400Regular and you get either the regular cut or, on
+ * Android, a smeared synthetic bold. So the weight is in the name, and `fontWeight` is absent
+ * from every variant below on purpose.
+ *
+ * `theme/fonts.js` holds the modules these names come from. It cannot live in this file,
+ * which the contrast gate loads through a `data:` URL and which therefore may not import
+ * anything.
+ */
+export const fonts = {
+  display: 'PlayfairDisplay_700Bold',
+  displayRegular: 'PlayfairDisplay_400Regular',
+  body: 'Poppins_400Regular',
+  medium: 'Poppins_500Medium',
+  semibold: 'Poppins_600SemiBold',
+  bold: 'Poppins_700Bold',
+};
+
+/**
+ * lineHeight is set rather than left to the platform, and `AppText` scales it alongside the
+ * font size for the big-text preference, so growing text never collides with the line below.
  */
 export const typography = {
-  hero: { fontSize: 40, fontWeight: '800', lineHeight: 46 },
-  display: { fontSize: 32, fontWeight: '700', lineHeight: 40 },
-  title: { fontSize: 24, fontWeight: '700', lineHeight: 32 },
-  heading: { fontSize: 20, fontWeight: '600', lineHeight: 28 },
-  subheading: { fontSize: 17, fontWeight: '600', lineHeight: 24 },
-  body: { fontSize: 16, fontWeight: '400', lineHeight: 24 },
-  bodyStrong: { fontSize: 16, fontWeight: '600', lineHeight: 24 },
-  label: { fontSize: 15, fontWeight: '600', lineHeight: 20 },
-  caption: { fontSize: 14, fontWeight: '400', lineHeight: 20 },
+  /** The landing wordmark. Playfair, like GMP's serif display type. */
+  hero: { fontSize: 38, lineHeight: 46, fontFamily: fonts.display },
+  display: { fontSize: 30, lineHeight: 38, fontFamily: fonts.display },
+  title: { fontSize: 24, lineHeight: 32, fontFamily: fonts.bold },
+  heading: { fontSize: 20, lineHeight: 28, fontFamily: fonts.semibold },
+  /**
+   * GMP's section title: Playfair at 18, uppercased by the component, with a hair of
+   * tracking. 18 rather than 22 is measured off their Figma — at 22 the headings were louder
+   * than the content under them.
+   */
+  sectionTitle: { fontSize: 18, lineHeight: 24, fontFamily: fonts.display, letterSpacing: 0.4 },
+  subheading: { fontSize: 17, lineHeight: 24, fontFamily: fonts.semibold },
+  body: { fontSize: 16, lineHeight: 24, fontFamily: fonts.body },
+  bodyStrong: { fontSize: 16, lineHeight: 24, fontFamily: fonts.semibold },
+  label: { fontSize: 15, lineHeight: 20, fontFamily: fonts.semibold },
+  caption: { fontSize: 14, lineHeight: 20, fontFamily: fonts.body },
+  /** The 12px line under a card title or beside a menu row. GMP's own caption size. */
+  footnote: { fontSize: 12, lineHeight: 17, fontFamily: fonts.body },
   /** Small spaced capitals for a section eyebrow. Always paired with a sentence-case
    *  accessibility label — readers spell short all-caps strings out letter by letter. */
-  overline: { fontSize: 12, fontWeight: '700', lineHeight: 16, letterSpacing: 1.2 },
-  button: { fontSize: 17, fontWeight: '600', lineHeight: 24 },
+  overline: { fontSize: 12, lineHeight: 16, letterSpacing: 1.2, fontFamily: fonts.bold },
+  button: { fontSize: 16, lineHeight: 22, fontFamily: fonts.semibold },
+  /** The all-caps label inside a pill button, as on GMP's catalogue cards. */
+  buttonSmall: { fontSize: 12, lineHeight: 16, letterSpacing: 0.8, fontFamily: fonts.bold },
   /** The number on a stat tile. Tabular figures are set by the component, not here. */
-  metric: { fontSize: 28, fontWeight: '800', lineHeight: 34 },
+  metric: { fontSize: 28, lineHeight: 34, fontFamily: fonts.bold },
 };
 
 // ---------------------------------------------------------------------------
@@ -324,7 +470,7 @@ export const a11y = {
 
   /**
    * The in-app "big text" preference, multiplied on top of the OS text-size setting rather
-   * than replacing it (Phase 11).
+   * than replacing it.
    *
    * 1.3 rather than something larger for a specific reason: it stacks. A user who has already
    * turned the OS up to 200% and then turns this on is asking for 260%, and `AppText` caps the
@@ -342,6 +488,7 @@ export const theme = {
   radius,
   elevation,
   typography,
+  fonts,
   a11y,
   highContrast,
 };

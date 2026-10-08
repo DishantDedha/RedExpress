@@ -84,15 +84,15 @@ export function DonorCard({ donor, onCall }) {
           <Avatar name={donor.name} size={44} />
 
           <View style={styles.identityText}>
-            <AppText variant="subheading">{name}</AppText>
+            <AppText variant="bodyStrong">{name}</AppText>
 
             {distance ? (
-              <AppText variant="caption" color={colors.textMuted} style={styles.line}>
+              <AppText variant="footnote" color={colors.textMuted} style={styles.line}>
                 {capitalise(distance)}
                 {place ? ` · ${place}` : ''}
               </AppText>
             ) : place ? (
-              <AppText variant="caption" color={colors.textMuted} style={styles.line}>
+              <AppText variant="footnote" color={colors.textMuted} style={styles.line}>
                 {place}
               </AppText>
             ) : null}
@@ -122,6 +122,15 @@ export function DonorCard({ donor, onCall }) {
       {donor.phone ? (
         <AppButton
           title={`Call ${name}`}
+          // GMP's card action: a pill with a glyph, not a full-width rectangle. On a list of
+          // twenty results, twenty rectangular CTAs is twenty competing red slabs; the pill
+          // keeps the call obvious without making the card about the button.
+          //
+          // Sentence case rather than the pill's default capitals — this label is a person's
+          // name, and a reader handed "CALL RAVI KUMAR" may spell it.
+          shape="pill"
+          uppercase={false}
+          icon="phone"
           onPress={() => {
             onCall?.(donor);
             callNumber(donor.phone, { name });
@@ -132,7 +141,7 @@ export function DonorCard({ donor, onCall }) {
           accessibilityHint="Opens your phone's dialler with this number"
         />
       ) : (
-        <AppText variant="caption" color={colors.textMuted}>
+        <AppText variant="footnote" color={colors.textMuted}>
           No phone number on record. Our team can still reach this donor.
         </AppText>
       )}

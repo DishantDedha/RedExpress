@@ -1,10 +1,24 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Stack, useRouter } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { announce } from '../components';
 import { onSessionEnded, SESSION_END_REASONS } from '../services/sessionEvents';
-import { colors, typography } from '../theme';
+import { colors } from '../theme';
+import { useAppFonts } from '../theme/fonts';
+
+/**
+ * Keep the splash up until the typefaces are in.
+ *
+ * Not cosmetic: every size in `typography` is set for Poppins and Playfair, so painting a
+ * screen before they arrive draws the whole app in the platform system font and then reflows
+ * every line of it a moment later. Held here, the first frame anyone sees is the right one.
+ *
+ * `catch` because this throws if the splash has already auto-hidden, which is not a reason to
+ * fail to start.
+ */
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 /**
  * The root of the navigation tree.
@@ -37,6 +51,16 @@ const REASON_MESSAGES = {
 
 export default function RootLayout() {
   const router = useRouter();
+  const [fontsLoaded, fontError] = useAppFonts();
+
+  // An error is not fatal. A font that failed to download leaves the app in the system font,
+  // which is the state it shipped in for months — refusing to start would be worse than
+  // looking wrong, and a donor opening this app may be in a hurry.
+  const fontsSettled = fontsLoaded || Boolean(fontError);
+
+  const onLayout = useCallback(() => {
+    if (fontsSettled) SplashScreen.hideAsync().catch(() => {});
+  }, [fontsSettled]);
 
   useEffect(
     () =>
@@ -54,24 +78,28 @@ export default function RootLayout() {
     [router],
   );
 
+  // Nothing is drawn until the fonts settle, so there is no system-font flash to reflow out
+  // of. The splash is still up, which is the right thing to be looking at.
+  if (!fontsSettled) return null;
+
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider onLayout={onLayout}>
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
-          // The native header is kept for one reason: its back button. React Navigation
-          // labels it correctly for both screen readers and it matches the platform gesture,
-          // which a hand-rolled chevron does not.
-          //
-          // Its *title* is blank on purpose. Each screen renders its own <ScreenHeader/>,
-          // which is the heading the reader is focused on; a native title as well would mean
-          // the screen name is read twice on every navigation.
-          headerShown: true,
-          headerTitle: '',
-          headerTintColor: colors.primary,
-          headerStyle: { backgroundColor: colors.background },
-          headerShadowVisible: false,
-          headerBackTitleStyle: typography.body,
+          /**
+           * No native header anywhere in the app.
+           *
+           * It used to be kept for its back button, drawn transparent above a screen's own red
+           * band. That produced two bars of chrome on every pushed screen — a 44pt empty strip
+           * and then the band under it — and the band had to carry 56px of top padding so its
+           * title did not land under the floating arrow.
+           *
+           * `ScreenHeader` draws the back button itself now, as a white disc inside the red,
+           * which is both GMP's pattern and one bar instead of two. The platform back *gesture*
+           * is unaffected: it does not come from the header.
+           */
+          headerShown: false,
           contentStyle: { backgroundColor: colors.background },
         }}
       >

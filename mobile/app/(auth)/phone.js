@@ -151,6 +151,7 @@ export default function PhoneScreen() {
       hero={
         <ScreenHeader
           title="Your mobile number"
+          back
           subtitle={PHONE_MODE_SUBTITLES[mode] ?? PHONE_MODE_SUBTITLES.reactivate}
           tone="brand"
           voicePurpose="Enter your ten digit mobile number. We will text you a one time password."

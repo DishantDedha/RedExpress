@@ -1,21 +1,34 @@
-import { StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router/js-tabs';
-import { HeaderBackButton, Icon } from '../../../components';
-import { colors, spacing, typography, a11y } from '../../../theme';
+import { BottomTabBar, useTabBarHeight } from '../../../components';
 
 /**
- * Header options for the two tabs Home also links into directly (`find-donors`,
- * `notifications`). Reaching either from a Home tile is a tab switch, not a push, so there is
- * no automatic back button to fall back on — see `HeaderBackButton`.
+ * The tabs, in bar order.
+ *
+ * A plain table rather than something read off the navigator, because the navigator also
+ * holds the routes that are deliberately *off* the bar — `find-donors` is reachable from Home
+ * and has no slot here.
  */
-const backToHomeHeader = {
-  headerShown: true,
-  headerTransparent: true,
-  headerStyle: { backgroundColor: 'transparent' },
-  headerShadowVisible: false,
-  headerTitle: '',
-  headerLeft: () => <HeaderBackButton />,
-};
+const TABS = [
+  { name: 'home', label: 'Home', icon: 'home' },
+  {
+    name: 'donate',
+    label: 'Donate',
+    icon: 'heart',
+    accessibilityLabel: 'Donate to Red Express',
+  },
+  {
+    name: 'notifications',
+    label: 'Alerts',
+    icon: 'bell',
+    accessibilityLabel: 'Your alerts',
+  },
+  {
+    name: 'profile',
+    label: 'Profile',
+    icon: 'user',
+    accessibilityLabel: 'Your profile and settings',
+  },
+];
 
 /**
  * The four places a signed-in user actually goes.
@@ -31,23 +44,28 @@ const backToHomeHeader = {
  * Four destinations are now permanent and one tap away, and the housekeeping moved onto the
  * profile tab where it belongs.
  *
- * ## This is an accessibility improvement, not a trade against one
+ * ## Back out of a tab reached from Home
  *
- * A tab bar is often where mobile accessibility goes wrong — unlabelled icons, targets under
- * 48dp, selection signalled by a tint alone. None of that applies here:
+ * `find-donors` and `notifications` are tabs, but Home links into both — and `router.push` to a
+ * tab switches tabs rather than stacking a screen, so there is no history for a back button to
+ * pop. Each of those screens draws its own `ScreenHeader layout="bar" back="/home"`, which goes
+ * to Home explicitly.
  *
- *   labels     Always visible, never icon-only. The label is the control's accessible name,
- *              so the icon carries nothing of its own (see `Icon`, where every glyph is
- *              hidden from the accessibility tree outright).
- *   selection  React Navigation reports the focused tab through `accessibilityState.selected`,
- *              so a reader says "selected" rather than the user having to perceive a colour.
- *              The active tint is the redundant, visual half of that signal.
- *   targets    `minHeight` on the item, not a fixed height — the bar grows with the OS text
- *              setting instead of clipping the labels.
- *   contrast   Active is `primary` at 7.33:1 on white and inactive is `textMuted` at 6.58:1.
- *              Both are AA as *text*, which is the bar an always-visible label has to clear —
- *              a 3:1 "inactive" grey would have been legal for an icon and unreadable as a
- *              word.
+ * That replaced a transparent native header with a hand-drawn chevron floating over the band. It
+ * had to float, because a solid native header above a red band is a second bar; floating, it sat
+ * exactly where the title wanted to be, which is why the band carried 56px of top padding. The
+ * bar draws the chevron inside itself and the padding went away with it.
+ *
+ * ## The bar draws itself
+ *
+ * `BottomTabBar` is the red slab from the GMP app, gradient and all, so the navigator is told
+ * only two things about it: do not draw a background of your own (anything it painted would
+ * show through the bar's rounded top corners), and this is how tall the bar is.
+ *
+ * That height has to be the true one, inset and all. A custom `tabBar` is laid out in flow and
+ * sizes itself, but this number is what the navigator reports as the tab bar's height to
+ * anything that asks — and it is computed from the current text size, because the bar carries
+ * labels and a fixed height clips them at 200%. See `useTabBarHeight`.
  *
  * ## Why a group rather than moving the stack
  *
@@ -59,79 +77,30 @@ const backToHomeHeader = {
  * notification tapped from the lock screen needs.
  */
 export default function TabsLayout() {
+  const barHeight = useTabBarHeight();
+
   return (
     <Tabs
       screenOptions={{
         // Each screen draws its own hero band and heading; a navigator header as well would
         // mean the screen's name is announced twice on arrival.
         headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: styles.bar,
-        tabBarItemStyle: styles.item,
-        tabBarLabelStyle: styles.label,
+        tabBarStyle: { height: barHeight, borderTopWidth: 0, backgroundColor: 'transparent' },
         // Otherwise the bar floats above the keyboard on the search and request forms,
         // covering the field being typed into.
         tabBarHideOnKeyboard: true,
       }}
+      tabBar={(props) => <BottomTabBar {...props} tabs={TABS} />}
     >
-      <Tabs.Screen
-        name="home"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => <Icon name="home" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="donate"
-        options={{
-          title: 'Donate',
-          tabBarAccessibilityLabel: 'Donate to Red Express',
-          tabBarIcon: ({ color, size }) => <Icon name="heart" size={size} color={color} />,
-        }}
-      />
+      <Tabs.Screen name="home" options={{ title: 'Home' }} />
+      <Tabs.Screen name="donate" options={{ title: 'Donate' }} />
       {/* Off the bar, not gone — the file-based navigator auto-lists every screen in this
           directory, so dropping the Tabs.Screen for a removed tab does not remove the route,
           it just shows up with default options. `href: null` is the documented way to keep
           `/find-donors` reachable (Home still links to it) without a slot in the bar. */}
-      <Tabs.Screen name="find-donors" options={{ href: null, ...backToHomeHeader }} />
-      <Tabs.Screen
-        name="notifications"
-        options={{
-          ...backToHomeHeader,
-          title: 'Alerts',
-          tabBarAccessibilityLabel: 'Your alerts',
-          tabBarIcon: ({ color, size }) => <Icon name="bell" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarAccessibilityLabel: 'Your profile and settings',
-          tabBarIcon: ({ color, size }) => <Icon name="user" size={size} color={color} />,
-        }}
-      />
+      <Tabs.Screen name="find-donors" options={{ href: null }} />
+      <Tabs.Screen name="notifications" options={{ title: 'Alerts' }} />
+      <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  bar: {
-    backgroundColor: colors.card,
-    // A real line, not a shadow. Shadows are absent under Android's "remove animations"
-    // setting, and the bar needs a visible boundary against a white sheet above it.
-    borderTopWidth: 1,
-    borderTopColor: colors.borderMuted,
-    paddingTop: spacing.xs,
-  },
-  item: {
-    // A minimum, so the bar grows with the OS text size rather than clipping the labels.
-    minHeight: a11y.minTouchTarget,
-    paddingVertical: spacing.xs,
-  },
-  label: {
-    fontSize: typography.caption.fontSize,
-    fontWeight: '600',
-  },
-});

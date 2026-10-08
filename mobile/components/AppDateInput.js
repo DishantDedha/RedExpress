@@ -198,11 +198,11 @@ export function AppDateInput({
 
       <View accessibilityLiveRegion="polite">
         {error ? (
-          <AppText variant="caption" color={colors.error} style={styles.message}>
+          <AppText variant="footnote" color={colors.error} style={styles.message}>
             Error: {error}
           </AppText>
         ) : helperText ? (
-          <AppText variant="caption" color={colors.textMuted} style={styles.message}>
+          <AppText variant="footnote" color={colors.textMuted} style={styles.message}>
             {helperText}
           </AppText>
         ) : null}
@@ -222,9 +222,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     minHeight: a11y.minTouchTarget,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
   inputError: { borderColor: colors.error, borderWidth: 2 },

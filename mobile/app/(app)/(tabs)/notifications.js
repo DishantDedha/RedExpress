@@ -3,10 +3,10 @@ import { StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   AppButton,
-  AppSwitch,
   AppText,
-  Card,
+  ChipRail,
   LiveMessage,
+  RowBlock,
   Screen,
   ScreenHeader,
   useAnnounce,
@@ -34,6 +34,22 @@ import { colors, spacing } from '../../../theme';
  *
  * `useFocusEffect`, not `useEffect`: coming back from a request that was opened from here
  * must not leave the row still showing as unread.
+ *
+ * ## The layout
+ *
+ * A list of full-bleed `RowBlock`s on a neutral page, which is how GMP draws every list it has.
+ * These used to be inset, rounded, bordered and shadowed cards — eight down a screen is eight
+ * floating objects with sixteen visible edges, and the list read as clutter however the colours
+ * were set. Now the only separator is the 8px of page showing between two blocks.
+ *
+ * Each row's state is a tinted strip across the top of its block rather than a chip inside it,
+ * so it is the first thing read and it is in the same place on every row, which is what lets the
+ * eye run down the list instead of hunting for a badge.
+ *
+ * The filter was a full-width switch with two sentences of state copy under it — about 110px to
+ * say "unread only, or everything". It is two pills in a `ChipRail` now, which is the same
+ * choice in 56px and reports itself as a tab list, so a reader says "Unread, tab, 2 of 2,
+ * selected" rather than "Show only unread, switch, on".
  */
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -102,56 +118,74 @@ export default function NotificationsScreen() {
   }
 
   function toggleFilter(next) {
+    // The rail reports a tap on the pill that is already selected; reloading the same list and
+    // announcing the same count would be a change the user did not ask for.
+    if (next === unreadOnly) return;
     setUnreadOnly(next);
     load({ filter: next, announce: true });
   }
 
   return (
     <Screen
-      hero={
+      page="muted"
+      padded={false}
+      bar={
         <ScreenHeader
+          layout="bar"
           title="Your alerts"
-          subtitle={
-            meta
-              ? meta.unreadCount
-                ? `${meta.unreadCount} unread.`
-                : 'Nothing unread.'
-              : 'Requests you have been alerted about.'
-          }
-          tone="brand"
+          back="/home"
           voicePurpose="Blood requests you have been alerted about. Open one to answer it."
           voiceAction="Open an alert"
         />
       }
     >
-      <Card>
-        <AppSwitch
-          label="Show only unread"
-          value={unreadOnly}
-          onValueChange={toggleFilter}
-          onText="Showing unread alerts only."
-          offText="Showing all alerts."
-          disabled={loading}
-        />
-      </Card>
+      <ChipRail
+        accessibilityLabel="Filter your alerts"
+        value={unreadOnly}
+        onChange={toggleFilter}
+        items={[
+          { value: false, label: 'All', accessibilityLabel: 'All alerts' },
+          {
+            value: true,
+            label: meta?.unreadCount ? `Unread (${meta.unreadCount})` : 'Unread',
+            accessibilityLabel: meta?.unreadCount
+              ? `Unread alerts, ${meta.unreadCount}`
+              : 'Unread alerts',
+          },
+        ]}
+      />
 
-      {loading && items === null ? <LiveMessage message="Loading your alerts…" tone="progress" /> : null}
-      <LiveMessage message={error} tone="error" />
+      {/* The blocks below are full-bleed, so anything that is not one puts the gutter back. */}
+      <View style={styles.gutter}>
+        {loading && items === null ? (
+          <LiveMessage message="Loading your alerts…" tone="progress" />
+        ) : null}
+        <LiveMessage message={error} tone="error" />
+      </View>
 
       {items?.length === 0 ? (
-        <Card>
+        <RowBlock>
           <AppText variant="body" color={colors.textMuted}>
             {unreadOnly
-              ? 'No unread alerts. Turn off "Show only unread" to see earlier ones.'
+              ? 'No unread alerts. Tap "All" to see the earlier ones.'
               : 'No alerts yet. When a patient near you needs your blood group, it will appear here.'}
           </AppText>
-        </Card>
+        </RowBlock>
       ) : null}
 
       {items?.map((item) => (
-        <Card
+        <RowBlock
           key={item.id}
           onPress={() => open(item)}
+          // The strip carries the state and the time. Both are decoration: the row's own label
+          // below opens with the state and closes with the time, so a reachable strip would say
+          // each of them twice.
+          status={
+            item.isRead
+              ? { label: 'Read', tone: 'neutral', icon: 'check' }
+              : { label: 'Unread', tone: 'brand', icon: 'bell' }
+          }
+          statusMeta={timeAgo(item.createdAt)}
           // One focus stop per alert, read as a sentence: state, then what happened, then
           // when. Left ungrouped this is four swipes per row and the timestamp ends up
           // detached from the alert it belongs to.
@@ -164,38 +198,30 @@ export default function NotificationsScreen() {
             .filter(Boolean)
             .join(' ')}
           accessibilityHint="Opens the blood request"
-          style={styles.row}
         >
-          {!item.isRead ? (
-            <AppText variant="caption" color={colors.primaryOnTint} style={styles.unread}>
-              Unread
-            </AppText>
-          ) : null}
-
-          <AppText variant="bodyStrong">{item.title}</AppText>
-          <AppText variant="body" color={colors.text} style={styles.body}>
+          <AppText variant="label">{item.title}</AppText>
+          <AppText variant="caption" color={colors.textMuted} style={styles.body}>
             {item.body}
           </AppText>
-          <AppText variant="caption" color={colors.textMuted} style={styles.time}>
-            {timeAgo(item.createdAt)}
-          </AppText>
-        </Card>
+        </RowBlock>
       ))}
 
-      {meta?.hasMore ? (
-        <AppText variant="caption" color={colors.textMuted} style={styles.more}>
-          Showing the {items.length} most recent of {meta.total} alerts.
-        </AppText>
-      ) : null}
+      <View style={styles.gutter}>
+        {meta?.hasMore ? (
+          <AppText variant="footnote" color={colors.textMuted} style={styles.more}>
+            Showing the {items.length} most recent of {meta.total} alerts.
+          </AppText>
+        ) : null}
 
-      <View style={styles.refresh}>
         <AppButton
           title="Refresh"
-          variant="secondary"
+          variant="neutral"
+          size="compact"
           loading={loading && items !== null}
           loadingLabel="Refreshing your alerts"
           onPress={() => load({ announce: true })}
           accessibilityHint="Checks for new alerts"
+          style={styles.refresh}
         />
       </View>
     </Screen>
@@ -213,18 +239,9 @@ function summarise(result, unreadOnly) {
 }
 
 const styles = StyleSheet.create({
-  row: { marginBottom: spacing.md },
-  unread: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primaryTint,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 999,
-    overflow: 'hidden',
-    marginBottom: spacing.sm,
-  },
-  body: { marginTop: spacing.xs },
-  time: { marginTop: spacing.sm },
-  more: { marginBottom: spacing.lg },
-  refresh: { marginTop: spacing.sm },
+  /** Puts the page's side padding back for content that is not a full-bleed block. */
+  gutter: { paddingHorizontal: spacing.lg },
+  body: { marginTop: 2 },
+  more: { marginTop: spacing.md, marginBottom: spacing.sm },
+  refresh: { marginTop: spacing.md },
 });

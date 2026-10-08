@@ -2,7 +2,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 're
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gradient } from './Gradient';
-import { colors, spacing, radius, typography } from '../theme';
+import { colors, spacing, radius } from '../theme';
 
 /**
  * The page frame: safe-area padding, keyboard avoidance, and a scroll container.
@@ -16,87 +16,111 @@ import { colors, spacing, radius, typography } from '../theme';
  * while the content above it still scrolls. It sits outside the ScrollView so it stays
  * reachable, and gets its own safe-area padding so it clears the home indicator.
  *
- * ## The three surfaces
+ * ## The four surfaces
  *
- * **`hero`** is the one to reach for. A red gradient band across the top carrying the
- * screen's title, and a white sheet tucked under it with rounded top corners holding
- * everything else. This is what makes the app white-and-red rather than red: the brand owns
- * a band, and the content — the part anyone has to read, fill in or scan — sits on white.
+ * **`bar`** is the one to reach for, and it is GMP's. A compact flat red strip at the top
+ * carrying the screen's title, pinned above the content rather than scrolling with it, and
+ * everything else on the page below. About 60px of chrome instead of 140.
  *
- * **`tone="brand"`** paints the whole screen red, which is how the mockups drew everything
- * before sign-in. It is kept because it is still right for a screen that is almost entirely
- * one statement — and it now paints the gradient rather than a flat fill.
+ * **`hero`** is the tall version: a red gradient band carrying a title, a line of copy and
+ * whatever the screen puts under them, with a white sheet tucked below it on rounded top
+ * corners. For the three screens that are a statement rather than a destination — Home, the
+ * landing, the sign-in flow.
  *
- * **The default** is the plain light surface.
+ * **`tone="brand"`** paints the whole screen red, for a screen that is almost entirely one
+ * statement.
  *
- * Tone is a prop rather than a per-screen style block so the foreground colours come as a
- * set: a screen cannot end up red with the default dark body text on it, which is the
+ * **The default** is the plain page with no chrome of its own.
+ *
+ * `page="muted"` switches the page from white to neutral-100, which is what a screen made of
+ * full-bleed `RowBlock`s wants: there, the 8px of page showing between two blocks *is* the
+ * separator, and on white there would be nothing to see.
+ *
+ * Tone and page are props rather than per-screen style blocks so the foreground colours come
+ * as a set: a screen cannot end up red with the default dark body text on it, which is the
  * failure mode this guards against. On any red surface use `colors.onPrimary` for anything
- * that matters and `colors.onBrandMuted` for supporting copy — nothing from the
- * light-surface set is readable there.
+ * that matters and `colors.onBrandMuted` for supporting copy — nothing from the light-surface
+ * set is readable there.
  *
- * The status bar flips to light content on both red surfaces, because dark status-bar glyphs
+ * The status bar flips to light content on every red surface, because dark status-bar glyphs
  * on the red fill are barely visible.
  *
- * ## Why the band scrolls rather than staying put
+ * ## Why the bar is pinned and the band is not
  *
- * A pinned band with scrolling content underneath means the title slides off the red and
- * onto the white sheet on the way past, which is unreadable for the two hundred pixels it
- * takes. The band is an ordinary first child of the scroll view instead, so the title stays
- * on its own background for its whole travel. The root is painted with the gradient's
- * lightest stop so an overscroll bounce at the top reveals red rather than a grey seam.
+ * A `bar` is 60px of flat colour with one line of text in it. Pinned, it behaves like the
+ * platform header it replaces: the title stays put, the list scrolls under it, and nothing
+ * about the title's background changes as it goes.
+ *
+ * A `hero` cannot do that. It is a gradient, and content scrolling out from under a pinned
+ * gradient means the screen's title slides off the red and onto the white sheet on the way
+ * past, unreadable for the two hundred pixels it takes. So the band is an ordinary first child
+ * of the scroll view and travels with its own background. The root is painted with the
+ * gradient's lightest stop so an overscroll bounce at the top reveals red rather than a grey
+ * seam.
  */
 
 /**
- * Header options for a navigator whose screens carry a red band.
+ * Header options for a navigator whose screens carry a `bar` or a band.
  *
- * The native header is kept for its back button — React Navigation labels it correctly for
- * both screen readers and it honours the platform back gesture, neither of which a
- * hand-drawn chevron does. It is only restyled: transparent, so it floats over the band
- * rather than sitting as a separate bar above it, with a white arrow.
+ * The native header used to be kept for its back button. It is not any more: a `bar` draws its
+ * own, as GMP does, and two back affordances stacked over one strip of red is what the old
+ * transparent-header arrangement actually produced. The native header is switched off and the
+ * screen owns its chrome.
+ *
+ * Kept as an export because every `(auth)` and `(app)` stack screen references it, and because
+ * `contentStyle` still matters: without it the stack animates a new screen in over a white
+ * card, which flashes white down the side of a red bar mid-transition.
  */
 export const brandHeaderOptions = {
-  headerShown: true,
-  headerTitle: '',
-  headerTintColor: colors.onPrimary,
-  headerTransparent: true,
-  headerStyle: { backgroundColor: 'transparent' },
-  headerShadowVisible: false,
-  headerBackTitleStyle: typography.body,
+  headerShown: false,
   contentStyle: { backgroundColor: colors.gradientBrand[0] },
 };
 
 /**
  * The gap between the safe area and the first line of hero content.
  *
- * Sized to clear a floating back button rather than to look right on its own. Most screens
- * with a band are pushed ones, and `brandHeaderOptions` makes their native header transparent
- * so the arrow sits *over* the band — at the safe-area inset, which is exactly where a title
- * would otherwise be drawn. 56 puts the title clear of a 44pt header with room to spare.
- *
- * The tab screens and the landing have no header and get the same value. On those it is
- * simply a generous top margin, which is what a hero band wants anyway.
+ * The native header used to float over the band, so this had to clear a back arrow drawn at
+ * the safe-area inset — exactly where the title wanted to be. Now that the band's screens
+ * draw no native header at all, this is simply a generous top margin, which is what a hero
+ * band wants anyway.
  */
-const HERO_TOP = spacing.xxl + spacing.xl;
+const HERO_TOP = spacing.xl;
+
+/** Vertical padding inside the red `bar`, above and below its single row. */
+const BAR_PAD = spacing.md;
 
 export function Screen({
   children,
   footer,
   scrollable = true,
-  /** 'default' — light app surface. 'brand' — full-bleed red, for a screen that is one statement. */
+  /** 'default' — the light page. 'brand' — full-bleed red, for a screen that is one statement. */
   tone = 'default',
+  /** 'white' or 'muted' (neutral-100, for a screen made of full-bleed `RowBlock`s). */
+  page = 'white',
   /**
-   * Content for the red gradient band at the top of the screen. Everything in `children`
-   * then renders on the white sheet below it.
+   * GMP's compact red strip at the top of the screen. Pass a `<ScreenHeader layout="bar" />`.
+   * Pinned above the content rather than scrolling with it.
+   */
+  bar,
+  /**
+   * Content for the tall red gradient band. Everything in `children` then renders on the white
+   * sheet below it.
    */
   hero,
-  /** Degrees of tilt on the gradient. A small angle reads as depth; a large one as a stunt. */
-  heroAngle = 14,
+  /**
+   * Degrees of tilt on the gradient.
+   *
+   * 0 — a straight top-to-bottom fade, which is what GMP's headers are and what this defaults
+   * to. It used to default to 14, and a tilted band is the kind of flourish that dates a
+   * screen: the ramp runs diagonally across a title that is set horizontally, so the copy sits
+   * on a different red at each end of the line for no reason anyone can name.
+   */
+  heroAngle = 0,
   /** Extra breathing room in the band, for a screen whose hero is a logo rather than a title. */
   heroPadding,
   /** Overrides the gap between the top of the screen and the hero content. See `HERO_TOP`. */
   heroTop,
-  /** Turn off when the screen manages its own horizontal padding, e.g. a full-bleed list. */
+  /** Turn off when the screen manages its own horizontal padding — a list of `RowBlock`s. */
   padded = true,
   contentContainerStyle,
   style,
@@ -105,9 +129,10 @@ export function Screen({
   const insets = useSafeAreaInsets();
   const brand = tone === 'brand';
   const hasHero = Boolean(hero);
-  // Both red surfaces need light status-bar glyphs and a red root, so the overscroll bounce
-  // does not flash grey above the band.
-  const onRed = brand || hasHero;
+  const hasBar = Boolean(bar);
+  // Every red surface needs light status-bar glyphs.
+  const onRed = brand || hasHero || hasBar;
+  const pageColor = page === 'muted' ? colors.pageMuted : colors.background;
 
   const body = (
     <>
@@ -128,7 +153,14 @@ export function Screen({
         </Gradient>
       ) : null}
 
-      <View style={[styles.grow, hasHero && styles.sheet, padded && styles.sheetPadded]}>
+      <View
+        style={[
+          styles.grow,
+          hasHero && styles.sheet,
+          hasHero && { backgroundColor: pageColor },
+          padded && styles.sheetPadded,
+        ]}
+      >
         {children}
       </View>
     </>
@@ -157,7 +189,10 @@ export function Screen({
       {hasHero ? body : children}
     </ScrollView>
   ) : (
-    <View style={[styles.flex, !hasHero && padded && styles.padded, contentContainerStyle]} {...rest}>
+    <View
+      style={[styles.flex, !hasHero && padded && styles.padded, contentContainerStyle]}
+      {...rest}
+    >
       {hasHero ? body : children}
     </View>
   );
@@ -166,9 +201,13 @@ export function Screen({
     <KeyboardAvoidingView
       style={[
         styles.root,
-        onRed && styles.rootRed,
-        // The band draws its own safe-area padding; anything else needs it here.
-        !hasHero && { paddingTop: insets.top },
+        { backgroundColor: pageColor },
+        // Behind either tall red surface: the ramp's lightest stop, so an overscroll bounce
+        // continues the band instead of exposing a seam above it.
+        (brand || hasHero) && styles.rootRed,
+        // A bar draws its own safe-area padding, and so does a band. Anything else needs it
+        // here.
+        !hasHero && !hasBar && { paddingTop: insets.top },
         style,
       ]}
       // iOS needs 'padding'; on Android the OS resizes the window itself and 'padding' on top
@@ -178,9 +217,20 @@ export function Screen({
       {/* Mounted per screen so the bar follows the surface it sits on. */}
       <StatusBar style={onRed ? 'light' : 'dark'} />
 
-      {/* A full-bleed brand screen gets the ramp behind everything, rather than the flat
-          fill it used to have. `Gradient` hides its own band stack from screen readers. */}
-      {brand ? <Gradient angle={heroAngle} style={styles.brandBackdrop} pointerEvents="none" /> : null}
+      {/* A full-bleed brand screen gets the ramp behind everything. `Gradient` hides its own
+          band stack from screen readers. */}
+      {brand ? (
+        <Gradient angle={heroAngle} style={styles.brandBackdrop} pointerEvents="none" />
+      ) : null}
+
+      {hasBar ? (
+        <Gradient
+          angle={heroAngle}
+          style={[styles.bar, { paddingTop: insets.top + BAR_PAD }]}
+        >
+          {bar}
+        </Gradient>
+      ) : null}
 
       {content}
 
@@ -200,9 +250,7 @@ export function Screen({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
-  // Behind either red surface: the ramp's lightest stop, so an overscroll bounce continues
-  // the band instead of exposing a grey seam above it.
+  root: { flex: 1 },
   rootRed: { backgroundColor: colors.gradientBrand[0] },
   brandBackdrop: { ...StyleSheet.absoluteFillObject },
   flex: { flex: 1 },
@@ -210,6 +258,17 @@ const styles = StyleSheet.create({
   // once the text outgrows the viewport.
   grow: { flexGrow: 1 },
   padded: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
+
+  /**
+   * The red strip. Flat rather than a ramp in practice — over 60px a three-stop gradient is
+   * indistinguishable from its own midpoint — but drawn with `Gradient` anyway so the bar, the
+   * band and the full-bleed screens are the same red, and so high contrast flattens all three
+   * through one code path.
+   */
+  bar: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: BAR_PAD,
+  },
 
   heroBand: {
     paddingHorizontal: spacing.lg,
@@ -223,7 +282,6 @@ const styles = StyleSheet.create({
    * bites into the red rather than floating below it with a sliver of red showing through.
    */
   sheet: {
-    backgroundColor: colors.background,
     borderTopLeftRadius: radius.xxl,
     borderTopRightRadius: radius.xxl,
     marginTop: -radius.xxl,

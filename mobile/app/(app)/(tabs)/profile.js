@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import {
   ActionTile,
   AppButton,
+  Avatar,
   AppDateInput,
   AppSelect,
   AppText,
@@ -362,13 +363,10 @@ export default function ProfileScreen() {
 
   return (
     <Screen
-      hero={
+      bar={
         <ScreenHeader
+          layout="bar"
           title="Your profile"
-          subtitle={
-            editing ? 'Change what you need to and save.' : 'Your donor details and availability.'
-          }
-          tone="brand"
           voicePurpose={
             editing
               ? 'Change your donor details, then save.'
@@ -402,6 +400,43 @@ export default function ProfileScreen() {
         ) : null
       }
     >
+      {/*
+        The identity block GMP's profile opens with: the photo, the name, the two facts under
+        it. It was the first four rows of a thirteen-row "Your details" card, which meant the
+        screen opened on a wall of label-and-value pairs with no focal point at all.
+
+        One focus stop with a written-out label, for the same reason the home band is: a reader
+        working down an avatar, a name, a group and a phone number as four nodes has to assemble
+        a fact it could simply have been told.
+      */}
+      <View
+        accessible
+        accessibilityLabel={[
+          user?.name ? `${user.name}.` : null,
+          `${bloodGroupLabel(profile.bloodGroup)}.`,
+          spokenPhone(user) ?? phoneOf(user),
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        style={styles.identity}
+      >
+        {profile.profilePhotoUrl ? (
+          <Image source={{ uri: profile.profilePhotoUrl }} style={styles.identityPhoto} />
+        ) : (
+          <Avatar name={user?.name} size={64} />
+        )}
+
+        <View style={styles.identityText}>
+          <AppText variant="subheading" numberOfLines={2}>
+            {user?.name ?? 'Your profile'}
+          </AppText>
+          <AppText variant="footnote" color={colors.textMuted} style={styles.identityLine}>
+            {bloodGroupLabel(profile.bloodGroup)}
+            {phoneOf(user) ? ` · ${phoneOf(user)}` : ''}
+          </AppText>
+        </View>
+      </View>
+
       <LiveMessage message={status?.message} tone={status?.tone ?? 'info'} />
 
       {/* --- Availability -------------------------------------------------- */}
@@ -489,21 +524,9 @@ export default function ProfileScreen() {
         />
       ) : (
         <Card title="Your details">
-          {profile.profilePhotoUrl ? (
-            <Image
-              source={{ uri: profile.profilePhotoUrl }}
-              style={styles.avatar}
-              // The name below it is the information; the picture is decoration a reader
-              // cannot describe.
-              accessibilityElementsHidden
-              importantForAccessibility="no-hide-descendants"
-            />
-          ) : null}
-
-          <Detail label="Name" value={user?.name} />
-          <Detail label="Mobile number" value={phoneOf(user)} spoken={spokenPhone(user)} />
+          {/* Name, photo, blood group and number are in the identity block at the top of the
+              screen, so they are not listed again here. */}
           <Detail label="Email address" value={user?.email} />
-          <Detail label="Blood group" value={bloodGroupLabel(profile.bloodGroup)} />
           <Detail label="Gender" value={genderLabel(profile.gender)} />
           <Detail label="Date of birth" value={formatDate(profile.dateOfBirth)} />
           <Detail label="Weight" value={profile.weight != null ? `${profile.weight} kilograms` : null} />
@@ -556,31 +579,34 @@ function AccountSection({ router }) {
     <>
       <SectionHeading title="Account" style={styles.accountSection} />
 
+      {/* Menu rows, not three stacked cards. The three of them used to be the height of the
+          donor record above, which said they mattered as much as it does. */}
+
       <ActionTile
+        layout="row"
         title="Accessibility settings"
         description="Voice guidance, big text, high contrast and dictation."
         icon="sliders"
         onPress={() => router.push('/settings')}
-        style={styles.accountTile}
       />
 
       {/* A labelled tile in the main column, not fine print in a footer. The people most
           affected by what this screen explains — donors handing over a phone number and a
           home address — are the ones least able to find a grey 8pt link. */}
       <ActionTile
+        layout="row"
         title="Privacy and permissions"
         description="What Red Express knows about you, and who can see it."
         icon="shield"
         onPress={() => router.push('/privacy')}
-        style={styles.accountTile}
       />
 
       <ActionTile
+        layout="row"
         title="See the component kit"
         description="A demonstration of the app's accessible components."
         icon="list"
         onPress={() => router.push('/demo')}
-        style={styles.accountTile}
       />
 
       <AppButton
@@ -847,7 +873,6 @@ function describeEligibility(lastDonationDate) {
 
 const styles = StyleSheet.create({
   accountSection: { marginTop: spacing.xl },
-  accountTile: { marginBottom: spacing.md },
   signOut: { marginTop: spacing.md },
   retry: { marginTop: spacing.lg, marginBottom: spacing.sm },
   note: { marginTop: spacing.md },
@@ -855,13 +880,22 @@ const styles = StyleSheet.create({
   inlineActions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
   detail: { marginBottom: spacing.lg },
   detailValue: { marginTop: spacing.xs },
-  avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: radius.lg,
-    backgroundColor: colors.background,
-    marginBottom: spacing.lg,
+  identity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    marginBottom: spacing.xl,
   },
+  identityPhoto: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+  },
+  // Takes the remaining width so a long name wraps under itself rather than pushing the photo
+  // off the row.
+  identityText: { flex: 1 },
+  identityLine: { marginTop: 2 },
   edit: { marginTop: spacing.sm },
   footerRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   footerAction: { flexGrow: 1, flexBasis: 140 },

@@ -64,6 +64,7 @@ export default function RegisterScreen() {
       hero={
         <ScreenHeader
           title="Join Red Express"
+          back
           subtitle="Choose your registration type to get started."
           tone="brand"
           voicePurpose="Two choices. Become a donor to give blood, or find blood if you need it."

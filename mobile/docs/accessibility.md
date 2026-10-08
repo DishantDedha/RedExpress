@@ -173,13 +173,16 @@ set of colours to check and no chance of the two drifting apart.
 
 | | Default | High contrast |
 | --- | --- | --- |
-| Helper text and captions | `#5A5D66`, 6.58:1 | `#1B1B1F`, **17.17:1** |
-| Muted copy on the red surfaces | `#FFE9EC`, 6.32:1 | `#FFFFFF`, **7.33:1** |
-| Input and button outlines | `#878A93`, 3.45:1, 1px | `#1B1B1F`, **17.17:1**, 2px |
-| Card edges and list dividers | `#C4C7CF`, 1.69:1 | `#878A93`, 3.45:1, 2px |
-| Primary button fill | `#B00020`, 7.33:1 | `#8C0019`, **9.86:1** (AAA) |
+| Helper text and captions | `#525252`, 7.82:1 | `#171717`, **17.90:1** |
+| Muted copy on the red surfaces | `#FEE3E2`, 4.93:1 | `#FFFFFF`, **7.93:1** |
+| Input and button outlines | `#858585`, 3.69:1, 1px | `#171717`, **17.90:1**, 2px |
+| Card edges and list dividers | `#E5E5E5`, 1.26:1 | `#858585`, 3.69:1, 2px |
+| Primary button fill | `#E02826`, 4.67:1 | `#A01918`, **7.93:1** (AAA) |
 | Primary button outline | none | near-black, 2px |
 | Default button height | 48dp | 56dp |
+
+The palette is GMP's brand ramp — see the header of `theme/index.js` for the three tokens that
+deliberately take a darker value than GMP's, and why each one has to.
 
 Two decisions worth stating:
 

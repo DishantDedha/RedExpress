@@ -58,13 +58,17 @@ const pairs = [
   ['onPrimary', 'primaryPressed', TEXT, 'AppButton primary — label while pressed'],
   ['primary', 'card', TEXT, 'AppButton secondary/link — label on card'],
   ['primary', 'background', TEXT, 'AppButton link — label on screen background'],
-  ['primaryOnTint', 'primaryTint', TEXT, 'Badge — text on red tint'],
+  ['primaryOnTint', 'primaryTint', TEXT, 'Badge / chip — text on red tint'],
+  // The brand red on its own 50 tint is 4.27:1, so a label that lands on a tinted surface
+  // steps down to the 800 rather than staying `primary`. The pair below is the one the UI
+  // actually renders — see `AppButton`'s `fgPressed`.
+  ['primaryOnTint', 'primaryTint', UI, 'Outline of a secondary button while pressed'],
 
   // The brand surface — the full-bleed red pre-sign-in screens (Phase 8).
   ['onPrimary', 'brand', TEXT, 'Headings and body copy on the brand background'],
   ['onBrandMuted', 'brand', TEXT, 'Muted supporting copy on the brand background'],
   ['primary', 'white', TEXT, 'AppButton brand — red label on the white fill'],
-  ['primary', 'primaryTint', TEXT, 'AppButton brand — label while pressed'],
+  ['primaryOnTint', 'primaryTint', TEXT, 'AppButton brand — label while pressed'],
   ['onPrimary', 'brandPressed', TEXT, 'AppButton brandOutline — label while pressed'],
   ['text', 'white', TEXT, 'Digit inside a verification-code box'],
   ['onPrimary', 'brand', UI, 'White outline: brandOutline border, code-box border'],
@@ -73,23 +77,39 @@ const pairs = [
   // The brand gradient (`colors.gradientBrand`). The band is drawn as stacked stops, so a
   // caption can land on any of them — each is checked, not just the average. red500 is the
   // lightest and therefore the binding one.
-  ['onPrimary', 'red500', TEXT, 'White copy on the lightest gradient stop'],
-  ['onPrimary', 'red900', TEXT, 'White copy on the darkest gradient stop'],
-  ['onBrandMuted', 'red500', TEXT, 'Muted copy on the lightest gradient stop'],
-  ['onBrandMuted', 'red900', TEXT, 'Muted copy on the darkest gradient stop'],
-  ['onPrimary', 'red500', UI, 'White outline on the lightest gradient stop'],
-  ['onBrandMuted', 'red500', UI, 'Muted outline on the lightest gradient stop'],
+  ['onPrimary', 'gradientLight', TEXT, 'White copy on the lightest gradient stop'],
+  ['onPrimary', 'gradientDark', TEXT, 'White copy on the darkest gradient stop'],
+  ['onBrandMuted', 'gradientLight', TEXT, 'Muted copy on the lightest gradient stop'],
+  ['onBrandMuted', 'gradientDark', TEXT, 'Muted copy on the darkest gradient stop'],
+  ['onPrimary', 'gradientLight', UI, 'White outline on the lightest gradient stop'],
+  ['onBrandMuted', 'gradientLight', UI, 'Muted outline on the lightest gradient stop'],
+
+  // The bottom bar (`colors.gradientBar`). Near-black red, so its labels are white and its
+  // selected tab is a 50-tint disc carrying the brand red as a glyph — an icon, hence UI.
+  ['onPrimary', 'barLight', TEXT, 'Tab label on the lightest bar stop'],
+  ['onPrimary', 'barDark', TEXT, 'Tab label on the darkest bar stop'],
+  ['primary', 'primaryTint', UI, 'Selected tab icon inside its 50-tint disc'],
+  ['primaryTint', 'barLight', UI, 'Edge of the selected tab disc against the bar'],
 
   // The blush surfaces — the tinted sections of the white-and-red scheme.
   ['text', 'blush', TEXT, 'Body copy on a blush section'],
   ['textMuted', 'blush', TEXT, 'Captions on a blush section'],
-  ['primary', 'blush', TEXT, 'A red label on a blush section'],
   ['primaryOnTint', 'blush', TEXT, 'Chip text on a blush section'],
   ['text', 'blushStrong', TEXT, 'Body copy on a selected blush surface'],
   ['textMuted', 'blushStrong', TEXT, 'Captions on a selected blush surface'],
   ['primaryOnTint', 'blushStrong', TEXT, 'Chip text on a selected blush surface'],
   ['border', 'blush', UI, 'Input outline on a blush section'],
   ['focusRing', 'blush', UI, 'Focus ring on a blush section'],
+
+  // The neutral page behind a list of full-bleed white blocks.
+  ['text', 'pageMuted', TEXT, 'Body copy on the list page'],
+  ['textMuted', 'pageMuted', TEXT, 'Captions on the list page'],
+  // Same rule as the blush surfaces: the brand red on the 100 is 4.28:1, so a red label that
+  // lands on the page rather than inside one of its white blocks steps down to the 800.
+  ['primaryOnTint', 'pageMuted', TEXT, 'A red label on the list page'],
+  ['border', 'pageMuted', UI, 'Input outline on the list page'],
+  ['focusRing', 'pageMuted', UI, 'Focus ring on the list page'],
+  ['borderMuted', 'pageMuted', DECORATIVE, 'Block edge against the list page (decorative)'],
 
   // Body copy
   ['text', 'card', TEXT, 'Body text on a card'],
@@ -139,7 +159,9 @@ const pairs = [
 const hcPairs = [
   [highContrast.text[colors.textMuted], colors.card, AAA, 'HC: muted text on a card'],
   [highContrast.text[colors.textMuted], colors.background, AAA, 'HC: muted text on the screen background'],
-  [highContrast.text[colors.onBrandMuted], colors.brand, AAA, 'HC: muted copy on the brand background'],
+  // Against the flattened band, not the flat `brand` token: in high contrast every red surface
+  // in the app is drawn by `Gradient`, which collapses to one dark stop.
+  [highContrast.text[colors.onBrandMuted], highContrast.gradient, AAA, 'HC: muted copy on the brand surface'],
 
   [colors.onPrimary, highContrast.primary, AAA, 'HC: AppButton primary — label on the darkened fill'],
   [highContrast.primary, colors.card, AAA, 'HC: AppButton secondary — label on a card'],
@@ -148,6 +170,9 @@ const hcPairs = [
 
   [colors.onPrimary, highContrast.gradient, AAA, 'HC: white copy on the flattened gradient band'],
   [colors.white, highContrast.gradient, UI, 'HC: white outline on the flattened gradient band'],
+
+  // The bottom bar flattens to its own darkest stop, not to the brand fill — see `Gradient`.
+  [colors.onPrimary, colors.barDark, AAA, 'HC: tab label on the flattened bar'],
 
   [highContrast.border, colors.card, UI, 'HC: input and button outline on a card'],
   [highContrast.border, colors.background, UI, 'HC: input and button outline on the screen background'],

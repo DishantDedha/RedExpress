@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     // that is smaller than a fingertip looks wrong even when it is not the thing being hit.
     minHeight: a11y.largeTouchTarget,
     maxWidth: 64,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',

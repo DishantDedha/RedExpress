@@ -4,7 +4,8 @@ import { Redirect, Stack } from 'expo-router';
 import { brandHeaderOptions, LiveMessage, Screen, ScreenHeader } from '../../components';
 import { useNotificationRouting } from '../../hooks/useNotificationRouting';
 import { getAccessToken } from '../../services/tokenStorage';
-import { colors, typography } from '../../theme';
+import { colors } from '../../theme';
+
 
 /**
  * The signed-in stack: home, profile, donor search, blood requests and the notification
@@ -62,15 +63,8 @@ export default function AppLayout() {
 
       <Stack
         screenOptions={{
-          headerShown: true,
-          // Blank on purpose: each screen renders its own <ScreenHeader/>, which is the
-          // heading the reader is focused on. A native title as well would mean the screen
-          // name is read twice on every navigation.
-          headerTitle: '',
-          headerTintColor: colors.primary,
-          headerStyle: { backgroundColor: colors.background },
-          headerShadowVisible: false,
-          headerBackTitleStyle: typography.body,
+          // Every screen draws its own bar, back button and all — see the root layout.
+          headerShown: false,
           contentStyle: { backgroundColor: colors.background },
         }}
       >
@@ -79,8 +73,8 @@ export default function AppLayout() {
             back button. */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
-        {/* Screens that open onto a red band need the transparent white-on-red header, or
-            the back arrow is a red glyph on red. */}
+        {/* `contentStyle` only: a screen whose first pixel is red should animate in over red,
+            or a white card flashes down the side of the bar mid-transition. */}
         <Stack.Screen name="post-request" options={brandHeaderOptions} />
         <Stack.Screen name="requests/[id]" options={brandHeaderOptions} />
       </Stack>

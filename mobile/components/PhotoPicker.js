@@ -254,8 +254,8 @@ const styles = StyleSheet.create({
   preview: {
     width: a11y.largeTouchTarget,
     height: a11y.largeTouchTarget,
-    borderRadius: radius.sm,
-    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
   },
   chosenText: { flex: 1 },
   empty: { paddingVertical: spacing.xs },

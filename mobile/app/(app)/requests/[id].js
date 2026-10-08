@@ -243,7 +243,7 @@ export default function RequestDetailScreen() {
 
   if (loading) {
     return (
-      <Screen hero={<ScreenHeader title="Blood request" subtitle="Loading the details." tone="brand" />}>
+      <Screen bar={<ScreenHeader layout="bar" title="Blood request" back />}>
         <LiveMessage message="Loading the request…" tone="progress" />
       </Screen>
     );
@@ -251,7 +251,7 @@ export default function RequestDetailScreen() {
 
   if (loadError) {
     return (
-      <Screen hero={<ScreenHeader title="Blood request" tone="brand" />}>
+      <Screen bar={<ScreenHeader layout="bar" title="Blood request" back />}>
         <LiveMessage message={loadError} tone="error" />
         <AppButton
           title="Try again"
@@ -270,11 +270,11 @@ export default function RequestDetailScreen() {
 
   return (
     <Screen
-      hero={
+      bar={
         <ScreenHeader
+          layout="bar"
           title={`${bloodGroupLabel(request.bloodGroup)} needed`}
-          subtitle={request.hospitalName}
-          tone="brand"
+          back
           // The full details are announced separately on arrival (see `spokenSummary`), so
           // this says only what the screen is *for* — otherwise a donor under voice guidance
           // hears the request twice, once in summary and once in full.

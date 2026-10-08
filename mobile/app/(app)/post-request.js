@@ -211,11 +211,11 @@ export default function PostRequestScreen() {
 
   return (
     <Screen
-      hero={
+      bar={
         <ScreenHeader
+          layout="bar"
           title="Request blood"
-          subtitle="We will alert matching donors near the hospital straight away."
-          tone="brand"
+          back
           voicePurpose="Tell us what blood is needed and where. Matching donors nearby are alerted straight away."
           voiceAction="Post request"
         />

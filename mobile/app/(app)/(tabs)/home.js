@@ -2,65 +2,76 @@ import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
-  ActionRow,
   ActionTile,
   AppText,
   Avatar,
-  Card,
+  ChipRail,
   Chip,
   LiveMessage,
   PushConsent,
+  QuickActions,
+  RowBlock,
   Screen,
   ScreenHeader,
+  SearchEntry,
   SectionHeading,
 } from '../../../components';
-import { bloodGroupLabel } from '../../../data/bloodGroups';
+import { BLOOD_GROUP_OPTIONS, bloodGroupLabel } from '../../../data/bloodGroups';
 import { getMe } from '../../../services/profile';
 import { colors, spacing } from '../../../theme';
 
 /**
  * Home, after sign-in.
  *
- * ## What changed, and why it is not only cosmetic
+ * ## The shape of the screen
  *
- * This screen used to be eight full-width buttons in a column — "Find blood donors" and
- * "Privacy and permissions" rendered at identical size, weight and colour. Everything was
- * equally important, which is the same as nothing being important. A donor opening the app
- * during an emergency had to read a list to find the one thing they came for.
+ * It answers three questions in the order they are asked:
  *
- * Now the screen answers three questions in the order they are asked:
+ *   who am I      the band — name, blood group, whether you are currently listed as available.
+ *                 The three facts a donor opens the app to check.
+ *   what can I do the search box, then the strip of three shortcuts beneath it.
+ *   what now      the blood-group rail, then your own requests.
  *
- *   who am I      the hero band — name, blood group, whether you are currently listed as
- *                 available. The three facts a donor opens the app to check.
- *   what can I do two tiles, sized and coloured to say which is the primary action.
- *   what happened the requests card, pointing at what you have posted and its status.
+ * ## What the redesign changed, and why none of it is only cosmetic
  *
- * The five housekeeping buttons moved to the profile tab, and the four destinations that
- * were buried in that column are now permanent tabs — see `(tabs)/_layout.js`.
+ * The screen used to be the band, then two large tiles with a sentence of explanation each,
+ * then a third tile, then a card of facts — four full-width objects stacked down the page, each
+ * about 110px tall, none of them showing any actual information. It read as a menu, which is
+ * what the tab bar is already for.
+ *
+ * Three changes:
+ *
+ *   the strip      Three shortcuts in 90px instead of three tiles in 330. The sentence each tile
+ *                  carried moves to the shortcut's accessibility *hint*, which is where an
+ *                  explanation belongs: read after the name, only when the user pauses there.
+ *   the rail       The blood groups, as a row of pills that open a prefiltered search. This is
+ *                  the first thing on the screen that is content rather than navigation, and it
+ *                  is the fastest route to the one question the app exists to answer.
+ *   the facts      The donor record is a two-column grid in a full-bleed block rather than four
+ *                  stacked label-and-value pairs, so it is about 90px instead of 220.
+ *
+ * ## The groups are spelled out, here as everywhere
+ *
+ * The rail says "O positive", not "O+". Pills rather than the round tiles GMP's category strip
+ * uses, and that is exactly why: a 56px circle cannot hold "O positive", and what will fit is
+ * the symbol — which this app never renders, on screen or off it, because "O plus" and "O minus"
+ * are a one-syllable difference on a field where being wrong is a medical error. See
+ * `data/bloodGroups.js`.
  *
  * ## The facts are still one stop, not six
  *
- * The identity block in the hero is a single `accessible` view with a written-out label, so
- * a screen-reader user hears "Hello Ravi. O positive. You are shown as available to donate."
- * as one sentence. Split across an avatar, a heading and two chips it would be four stops to
- * assemble a fact you should be told outright — and the chips would be read as bare words
- * with no indication of what they are chips *of*.
+ * The identity block in the band is a single `accessible` view with a written-out label, so a
+ * screen-reader user hears "Hello Ravi. O positive. You are shown as available to donate." as
+ * one sentence. Split across an avatar, a heading and two chips it would be four stops to
+ * assemble a fact you should be told outright — and the chips would be read as bare words with
+ * nothing to say what they describe.
  *
- * Reloaded with `useFocusEffect` rather than `useEffect`, because coming back from the
- * profile tab after switching availability off must not leave this screen insisting you are
- * available.
+ * Reloaded with `useFocusEffect` rather than `useEffect`, because coming back from the profile
+ * tab after switching availability off must not leave this screen insisting you are available.
  *
- * `PushConsent` sits at the top of the sheet because notification permission is asked once
- * per install and a donor who never sees the explanation never gets alerted about anything.
- * It renders nothing at all once alerts are on.
- *
- * ## Alerts are not shown here twice
- *
- * This screen used to carry its own "N unread" preview tile alongside the Alerts tab in the
- * bar below — the same destination, reached two ways, with the count kept in sync in two
- * places instead of one. The tab bar is always visible and already says "Alerts"; a second
- * entry point one scroll away added a decision ("which one do I tap") without adding
- * information. What sat there now points at requests, which the tab bar has no tab for.
+ * `PushConsent` sits at the top of the page because notification permission is asked once per
+ * install and a donor who never sees the explanation never gets alerted about anything. It
+ * renders nothing at all once alerts are on.
  */
 export default function HomeScreen() {
   const router = useRouter();
@@ -101,8 +112,8 @@ export default function HomeScreen() {
   const name = me?.user?.name;
   const group = donor ? bloodGroupLabel(donor.bloodGroup) : null;
 
-  // Written for the ear as sentences. Full stops are the only punctuation that reliably
-  // gives a listener a beat between facts.
+  // Written for the ear as sentences. Full stops are the only punctuation that reliably gives a
+  // listener a beat between facts.
   const identityLabel = [
     name ? `Hello, ${name}.` : 'Home.',
     group ? `${group}.` : null,
@@ -117,14 +128,16 @@ export default function HomeScreen() {
 
   return (
     <Screen
+      heroTop={spacing.sm}
+      heroPadding={spacing.lg}
       hero={
-        <View>
+        <>
           <ScreenHeader
             title={name ? `Hello, ${name}` : 'Home'}
             subtitle={
               isDonor
                 ? 'Your donor account is active.'
-                : 'You can post a blood request and reach donors near you.'
+                : 'Post a blood request and reach donors near you.'
             }
             tone="brand"
             accessibilityLabel={identityLabel}
@@ -135,43 +148,78 @@ export default function HomeScreen() {
             }
             voiceAction="Find blood donors"
             style={styles.heroHeader}
+            actions={
+              name ? (
+                // The avatar looks like a profile shortcut everywhere this pattern appears, so
+                // it has to behave like one. `/profile` is one of the four permanent tabs, so
+                // this switches tabs; it does not push a screen over the bar.
+                <Pressable
+                  onPress={() => router.push('/profile')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open your profile"
+                  accessibilityHint="Opens your profile, availability and account settings"
+                  hitSlop={8}
+                  style={({ pressed }) => [styles.avatarButton, pressed && styles.pressed]}
+                >
+                  <Avatar name={name} size={44} tone="onBrand" />
+                </Pressable>
+              ) : null
+            }
           >
             {donor ? (
               <View
-                // Decoration for the facts already spoken by the heading above. Left
-                // reachable it would repeat "O positive" and "available" as two bare words
-                // with nothing to say what they describe.
+                // Decoration for the facts already spoken by the heading above. Left reachable
+                // it would repeat "O positive" and "available" as two bare words with nothing
+                // to say what they describe.
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
                 style={styles.chips}
               >
-                <Chip label={group} tone="onBrand" />
+                <Chip label={group} tone="onBrand" size="sm" />
                 <Chip
                   label={donor.isAvailable ? 'Available' : 'Not available'}
                   tone="onBrand"
+                  size="sm"
                   icon={donor.isAvailable ? 'check' : undefined}
                 />
               </View>
             ) : null}
           </ScreenHeader>
 
-          {name ? (
-            // The avatar looks like a profile shortcut everywhere this pattern appears, so it
-            // has to behave like one — previously this was a plain decorative View a tap did
-            // nothing to. `/profile` is one of the four permanent tabs (see (tabs)/_layout.js),
-            // so this just switches tabs; it does not push a new screen over the bar.
-            <Pressable
-              onPress={() => router.push('/profile')}
-              accessibilityRole="button"
-              accessibilityLabel="Open your profile"
-              accessibilityHint="Opens your profile, availability and account settings"
-              hitSlop={8}
-              style={({ pressed }) => [styles.avatarButton, pressed && styles.avatarButtonPressed]}
-            >
-              <Avatar name={name} size={56} tone="onBrand" />
-            </Pressable>
-          ) : null}
-        </View>
+          <SearchEntry
+            label="Find blood donors near you"
+            accessibilityLabel="Find blood donors"
+            accessibilityHint="Search donors by blood group, area, and distance from you"
+            onPress={() => router.push('/find-donors')}
+          />
+
+          <QuickActions
+            style={styles.quickActions}
+            items={[
+              {
+                key: 'request',
+                label: 'Request blood',
+                icon: 'drop',
+                onPress: () => router.push('/post-request'),
+                accessibilityHint: 'Posts a request and alerts matching donors near the hospital',
+              },
+              {
+                key: 'requests',
+                label: 'Your requests',
+                icon: 'list',
+                onPress: () => router.push('/requests'),
+                accessibilityHint: 'Requests you have posted, and whether they are still open',
+              },
+              {
+                key: 'donors',
+                label: 'Find donors',
+                icon: 'search',
+                onPress: () => router.push('/find-donors'),
+                accessibilityHint: 'Search donors by blood group, area, and distance from you',
+              },
+            ]}
+          />
+        </>
       }
     >
       {loading && !me ? <LiveMessage message="Loading your details…" tone="progress" /> : null}
@@ -180,38 +228,27 @@ export default function HomeScreen() {
       <PushConsent />
 
       <SectionHeading
-        overline="WHAT DO YOU NEED"
-        title="Get help, or give it"
-        style={styles.section}
+        overline="WHO NEEDS BLOOD"
+        title="Search by group"
+        description="Opens the donor search with that group already chosen."
+        style={styles.firstSection}
       />
 
-      <ActionRow>
-        <ActionTile
-          title="Find blood donors"
-          description="Search by blood group and how far away they are."
-          icon="search"
-          tone="primary"
-          onPress={() => router.push('/find-donors')}
-          accessibilityHint="Search donors by blood group, area, and distance from you"
-        />
-        <ActionTile
-          title="Request blood"
-          description="Alert matching donors near the hospital."
-          icon="drop"
-          tone="tint"
-          onPress={() => router.push('/post-request')}
-          accessibilityHint="Posts a request and alerts matching donors near the hospital"
-        />
-      </ActionRow>
-
-      <SectionHeading title="Your requests" style={styles.section} />
-
-      <ActionTile
-        title="See your requests"
-        description="Everything you have posted, and its status."
-        icon="list"
-        onPress={() => router.push('/requests')}
-        accessibilityHint="Requests you have posted, and whether they are still open"
+      {/*
+        Full-bleed: the rail scrolls sideways, and a rail inset by the page's 16px gutter stops
+        16px short of the edge, which reads as the list having ended rather than continuing.
+        Its own `paddingHorizontal` puts the first pill back on the gutter.
+      */}
+      <ChipRail
+        surface={false}
+        accessibilityLabel="Search donors by blood group"
+        style={styles.rail}
+        items={BLOOD_GROUP_OPTIONS.map((option) => ({
+          value: option.value,
+          label: option.label,
+          accessibilityLabel: `Find ${option.label} donors`,
+        }))}
+        onSelect={(bloodGroup) => router.push({ pathname: '/find-donors', params: { bloodGroup } })}
       />
 
       {donor ? (
@@ -219,36 +256,38 @@ export default function HomeScreen() {
           <SectionHeading title="Your donor record" style={styles.section} />
 
           {/* One stop, so the facts are heard as a sentence rather than as six fragments to
-              reassemble. */}
-          <Card
+              reassemble. Full-bleed, like the rail, so it is not a floating card between two
+              things that run to the edge. */}
+          <RowBlock
             grouped
+            style={styles.block}
+            status={{
+              label: donor.isAvailable ? 'Available to donate' : 'Not available',
+              tone: donor.isAvailable ? 'success' : 'neutral',
+              icon: donor.isAvailable ? 'check' : 'user',
+            }}
             accessibilityLabel={`Your donor record. Blood group ${group}. ${
               donor.isAvailable
                 ? 'You are shown as available to donate.'
-                : 'You are shown as not available to donate.'
-            } Registered in ${[donor.city, donor.district].filter(Boolean).join(', ')}.`}
+                : 'You are shown as not available to donate, so you will not appear in searches.'
+            } Registered in ${[donor.city, donor.district].filter(Boolean).join(', ') || 'nowhere yet'}.`}
           >
-            <Fact label="Blood group" value={group} />
-            <Fact
-              label="Availability"
-              value={
-                donor.isAvailable
-                  ? 'Available to donate'
-                  : 'Not available — you will not appear in searches'
-              }
-            />
-            <Fact
-              label="Registered in"
-              value={[donor.city, donor.district].filter(Boolean).join(', ') || 'Not set'}
-            />
-          </Card>
+            <View style={styles.facts}>
+              <Fact label="Blood group" value={group} />
+              <Fact
+                label="Registered in"
+                value={[donor.city, donor.district].filter(Boolean).join(', ') || 'Not set'}
+              />
+            </View>
+          </RowBlock>
         </>
       ) : (
         <ActionTile
+          layout="row"
+          tone="tint"
           title="Complete your donor registration"
           description="Add your blood group so nearby patients can reach you."
           icon="plus"
-          tone="tint"
           onPress={() => router.push('/donor-form')}
           accessibilityHint="Opens the donor registration form"
           style={styles.section}
@@ -258,13 +297,14 @@ export default function HomeScreen() {
   );
 }
 
+/** One label-and-value pair, half the width of the block. */
 function Fact({ label, value }) {
   return (
     <View style={styles.fact}>
-      <AppText variant="caption" color={colors.textMuted}>
+      <AppText variant="footnote" color={colors.textMuted}>
         {label}
       </AppText>
-      <AppText variant="body" style={styles.factValue}>
+      <AppText variant="bodyStrong" style={styles.factValue}>
         {value}
       </AppText>
     </View>
@@ -272,18 +312,32 @@ function Fact({ label, value }) {
 }
 
 const styles = StyleSheet.create({
-  heroHeader: { marginBottom: 0, paddingRight: 72 },
-  // Sits in the space the header's right padding reserved for it, so a long name wraps
-  // beside the avatar instead of underneath it.
-  avatarButton: { position: 'absolute', top: 0, right: 0, borderRadius: 999 },
-  avatarButtonPressed: { opacity: 0.75 },
+  // The band's children supply their own spacing now, so the header does not carry a 24px
+  // bottom margin on top of them.
+  heroHeader: { marginBottom: spacing.lg },
+  avatarButton: { borderRadius: 999 },
+  pressed: { opacity: 0.75 },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
   },
+  quickActions: { marginTop: spacing.md },
+  // The sheet already pads itself by 24; a section heading that adds another 24 on top of that
+  // opens a gap the design does not have.
+  firstSection: { marginTop: 0 },
   section: { marginTop: spacing.xl },
-  fact: { marginBottom: spacing.md },
-  factValue: { marginTop: spacing.xs },
+  // Cancels the page gutter so the rail and the block run to both edges.
+  rail: { marginHorizontal: -spacing.lg },
+  block: { marginHorizontal: -spacing.lg },
+  facts: {
+    flexDirection: 'row',
+    // At a large text size the two columns stack rather than squeezing a city name into half a
+    // screen one word at a time.
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  fact: { flexGrow: 1, flexBasis: 130 },
+  factValue: { marginTop: 1 },
 });

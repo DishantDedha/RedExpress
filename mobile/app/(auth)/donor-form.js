@@ -274,6 +274,7 @@ export default function DonorFormScreen() {
       hero={
         <ScreenHeader
           title="Register as a Donor"
+          back
           subtitle="Register today to become a lifesaving blood donor for patients."
           tone="brand"
           voicePurpose="A form in three parts: your details, where you live, and a password to sign in with. Only the marked fields are required."

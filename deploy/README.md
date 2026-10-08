@@ -1,5 +1,9 @@
 # Deploying Red Express to one EC2 instance
 
+> Deploying to a **Hostinger KVM VPS** instead? Follow [`hostinger.md`](hostinger.md), which is
+> this runbook with the AWS-shaped steps removed. The sections below still explain the parts
+> that are identical.
+
 The runbook for the single-box setup: backend, CRM and PostgreSQL on one Ubuntu 24.04
 instance, nginx in front, photos in S3. [`../docs/deploy.md`](../docs/deploy.md) explains *why*
 each environment variable matters; this page is the order to type things in.

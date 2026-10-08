@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import {
   AppButton,
   AppSelect,
@@ -49,8 +50,21 @@ export default function FindDonorsScreen() {
   const moveFocus = useFocusMover();
   const resultsHeadingRef = useRef(null);
 
+  /**
+   * A group arrived with the route — the blood-group rail on Home links here with one chosen.
+   *
+   * Only the initial state, deliberately: the select below owns the value from the first render
+   * on, so the user can change it and arrive back at a different group without the parameter
+   * snapping it back. Validated against the real options rather than trusted, since a parameter
+   * is a string from a deep link as easily as from the rail.
+   */
+  const params = useLocalSearchParams();
+  const initialGroup = BLOOD_GROUP_OPTIONS.some((option) => option.value === params.bloodGroup)
+    ? params.bloodGroup
+    : null;
+
   const [filters, setFilters] = useState({
-    bloodGroup: null,
+    bloodGroup: initialGroup,
     state: 'Odisha',
     district: null,
     city: null,
@@ -147,11 +161,11 @@ export default function FindDonorsScreen() {
 
   return (
     <Screen
-      hero={
+      bar={
         <ScreenHeader
+          layout="bar"
           title="Find blood donors"
-          subtitle="Search verified donors near you for an emergency blood requirement."
-          tone="brand"
+          back="/home"
           voicePurpose="Choose a blood group and an area, then search. Results are nearest first, each with a call button."
           voiceAction="Search"
         />
@@ -252,7 +266,20 @@ export default function FindDonorsScreen() {
 
       {results !== null ? (
         <View style={styles.results}>
-          <AppText ref={resultsHeadingRef} variant="heading" accessibilityRole="header" accessible>
+          {/*
+            Not a `SectionHeading`: this heading is the one element on the screen that takes
+            screen-reader focus when the results arrive (a list appearing below a button is a
+            silent change), and that needs the ref on the Text itself. It takes the section
+            title's type so it still reads as one.
+          */}
+          <AppText
+            ref={resultsHeadingRef}
+            variant="sectionTitle"
+            accessibilityRole="header"
+            accessibilityLabel={heading}
+            accessible
+            style={styles.resultsHeading}
+          >
             {heading}
           </AppText>
 
@@ -275,7 +302,8 @@ export default function FindDonorsScreen() {
           {meta?.hasMore ? (
             <AppButton
               title="Show more donors"
-              variant="secondary"
+              variant="neutral"
+              size="compact"
               loading={loadingMore}
               loadingLabel="Loading more donors"
               onPress={() => run({ page: meta.page + 1 })}
@@ -304,5 +332,8 @@ const RADIUS_OPTIONS = [
 const styles = StyleSheet.create({
   hint: { marginBottom: spacing.md },
   results: { marginTop: spacing.xl },
+  // Uppercased by the style, as `SectionHeading` does it, so what the reader says is still the
+  // sentence passed to `accessibilityLabel` above.
+  resultsHeading: { textTransform: 'uppercase', marginBottom: spacing.md },
   note: { marginTop: spacing.sm, marginBottom: spacing.lg },
 });

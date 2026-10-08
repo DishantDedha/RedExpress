@@ -53,12 +53,15 @@ export function Card({
   const body = (
     <>
       {title ? (
-        <AppText variant="subheading" style={styles.title}>
+        // GMP's card titles are 16 semibold with a 12px line under them, not 17/14. The
+        // smaller caption is what lets a card hold a title, a hint and its content without
+        // the first two shouting over the third.
+        <AppText variant="bodyStrong" role="header" style={styles.title}>
           {title}
         </AppText>
       ) : null}
       {subtitle ? (
-        <AppText variant="caption" color={colors.textMuted} style={styles.subtitle}>
+        <AppText variant="footnote" color={colors.textMuted} style={styles.subtitle}>
           {subtitle}
         </AppText>
       ) : null}
@@ -106,16 +109,24 @@ export function Card({
 }
 
 const styles = StyleSheet.create({
+  /**
+   * GMP's catalogue card: a 16px radius, a neutral-200 line all the way round, and a shadow
+   * barely there behind it.
+   *
+   * The shadow used to do the work and the border was a backstop. That is the wrong way round
+   * on a white page — a soft shadow on white reads as a smudge, where a 1px line reads as an
+   * edge. Now the line is the card and the shadow only lifts it. It also means the card looks
+   * the same on Android with elevation off, under "remove animations", and in high-contrast
+   * mode, rather than dissolving into the page in all three.
+   */
   card: {
     backgroundColor: colors.card,
     borderRadius: radius.xl,
     padding: spacing.lg,
     marginBottom: spacing.lg,
-    // A border as well as a shadow. Shadows vanish under Android's "remove animations"
-    // setting and in high-contrast modes; the border is what keeps the card's edge visible.
     borderWidth: 1,
     borderColor: colors.borderMuted,
-    ...elevation.md,
+    ...elevation.sm,
   },
   pressable: { minHeight: a11y.minTouchTarget },
   pressed: { backgroundColor: colors.primaryTint, borderColor: colors.primary },

@@ -84,6 +84,7 @@ export default function SetPasswordScreen() {
       hero={
         <ScreenHeader
           title="Set a password"
+          back
           subtitle="Choose a password so you can sign in without a text message next time."
           tone="brand"
           voicePurpose="Choose a password, at least 8 characters, and enter it again to confirm."

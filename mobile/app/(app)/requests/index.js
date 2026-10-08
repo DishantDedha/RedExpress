@@ -4,9 +4,8 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import {
   AppButton,
   AppText,
-  Card,
-  Chip,
   LiveMessage,
+  RowBlock,
   Screen,
   ScreenHeader,
   useAnnounce,
@@ -78,72 +77,83 @@ export default function MyRequestsScreen() {
 
   return (
     <Screen
-      hero={
+      page="muted"
+      padded={false}
+      bar={
         <ScreenHeader
+          layout="bar"
           title="Your requests"
-          subtitle={meta ? summarise(meta) : 'Requests you have posted.'}
-          tone="brand"
+          back
           voicePurpose="Every blood request you have posted, and its current status."
         />
       }
     >
-      {loading && items === null ? (
-        <LiveMessage message="Loading your requests…" tone="progress" />
-      ) : null}
-      <LiveMessage message={error} tone="error" />
+      {/* The blocks below are full-bleed, so anything that is not one puts the gutter back. */}
+      <View style={styles.gutter}>
+        {loading && items === null ? (
+          <LiveMessage message="Loading your requests…" tone="progress" />
+        ) : null}
+        <LiveMessage message={error} tone="error" />
+      </View>
 
       {items?.length === 0 ? (
-        <Card>
+        <RowBlock>
           <AppText variant="body" color={colors.textMuted}>
             You have not posted a blood request yet. When you do, it will appear here with
             who has been alerted and whether it is still open.
           </AppText>
-        </Card>
+        </RowBlock>
       ) : null}
 
       {items?.map((item) => (
-        <Card
+        <RowBlock
           key={item.id}
           onPress={() =>
             router.push({ pathname: '/requests/[id]', params: { id: item.id } })
           }
+          // The status moved out of the row and onto a strip across the top of the block, which
+          // is where GMP puts it: a chip beside the title competed with the title for the first
+          // thing read, and it sat at a different place on every row because the title it was
+          // pushed off wraps differently each time.
+          status={{
+            label: requestStatusLabel(item.status),
+            tone: requestStatusTone(item.status),
+            icon: item.status === 'OPEN' ? 'drop' : item.status === 'FULFILLED' ? 'check' : 'list',
+          }}
+          statusMeta={timeAgo(item.createdAt)}
           accessibilityLabel={rowLabel(item)}
           accessibilityHint="Opens this request"
-          style={styles.row}
         >
-          <View style={styles.rowHeader}>
-            <AppText variant="bodyStrong" style={styles.rowTitle}>
-              {bloodGroupLabel(item.bloodGroup)} · {item.hospitalName}
-            </AppText>
-            <Chip label={requestStatusLabel(item.status)} tone={requestStatusTone(item.status)} size="sm" />
-          </View>
+          <AppText variant="label">
+            {bloodGroupLabel(item.bloodGroup)} · {item.hospitalName}
+          </AppText>
 
-          <AppText variant="caption" color={colors.textMuted} style={styles.rowMeta}>
+          <AppText variant="footnote" color={colors.textMuted} style={styles.rowMeta}>
             {[
               item.urgency && item.urgency !== 'NORMAL' ? urgencyLabel(item.urgency) : null,
               typeof item.matchCount === 'number'
                 ? `${item.matchCount} ${item.matchCount === 1 ? 'donor' : 'donors'} alerted`
                 : null,
-              `Posted ${timeAgo(item.createdAt)}`,
             ]
               .filter(Boolean)
-              .join(' · ')}
+              .join(' · ') || 'No donors alerted yet'}
           </AppText>
-        </Card>
+        </RowBlock>
       ))}
 
-      {meta?.hasMore ? (
-        <AppText variant="caption" color={colors.textMuted} style={styles.more}>
-          Showing the {items.length} most recent of {meta.total} requests.
-        </AppText>
-      ) : null}
+      <View style={styles.gutter}>
+        {meta?.hasMore ? (
+          <AppText variant="footnote" color={colors.textMuted} style={styles.more}>
+            Showing the {items.length} most recent of {meta.total} requests.
+          </AppText>
+        ) : null}
 
-      <View style={styles.newRequest}>
         <AppButton
           title="Post a new request"
-          variant="secondary"
+          icon="plus"
           onPress={() => router.push('/post-request')}
           accessibilityHint="Opens the form to post a new blood request"
+          style={styles.newRequest}
         />
       </View>
     </Screen>
@@ -176,15 +186,9 @@ function rowLabel(item) {
 }
 
 const styles = StyleSheet.create({
-  row: { marginBottom: spacing.md },
-  rowHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  rowTitle: { flex: 1 },
-  rowMeta: { marginTop: spacing.sm },
-  more: { marginBottom: spacing.lg },
-  newRequest: { marginTop: spacing.sm },
+  /** Puts the page's side padding back for content that is not a full-bleed block. */
+  gutter: { paddingHorizontal: spacing.lg },
+  rowMeta: { marginTop: 2 },
+  more: { marginTop: spacing.md, marginBottom: spacing.sm },
+  newRequest: { marginTop: spacing.md },
 });

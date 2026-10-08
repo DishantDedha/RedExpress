@@ -67,7 +67,6 @@ export default function LandingScreen() {
 
   return (
     <Screen
-      heroAngle={18}
       heroPadding={spacing.xxl}
       hero={
         <View style={styles.hero}>
@@ -85,7 +84,7 @@ export default function LandingScreen() {
             style={styles.tagline}
           >
             Find{' '}
-            <AppText variant="heading" color={colors.onPrimary} role="text" style={styles.emphasis}>
+            <AppText variant="heading" weight="bold" color={colors.onPrimary} role="text">
               blood donors
             </AppText>{' '}
             instantly and provide lifesaving support to patients in need.
@@ -125,9 +124,6 @@ export default function LandingScreen() {
 const styles = StyleSheet.create({
   hero: { alignItems: 'stretch', paddingVertical: spacing.lg },
   tagline: { marginTop: spacing.xl, paddingHorizontal: spacing.sm },
-  // Bold carries the emphasis on screen. It is not the only signal for anyone else: the
-  // sentence reads the same either way, so nothing is lost when the styling is not perceived.
-  emphasis: { fontWeight: '800' },
   action: { marginBottom: spacing.md },
   // Pushes the credit to the bottom of the sheet without pinning it there, so it moves down
   // rather than overlapping when the text size grows.

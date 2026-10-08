@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
+  ActionRow,
+  ActionTile,
   AppButton,
   AppCheckbox,
   AppDateInput,
@@ -9,10 +11,16 @@ import {
   AppText,
   AppTextInput,
   Card,
+  Chip,
+  ChipRail,
   LiveMessage,
   OtpInput,
+  QuickActions,
+  RowBlock,
   Screen,
   ScreenHeader,
+  SearchEntry,
+  SectionHeading,
   useAnnounce,
 } from '../components';
 import { useScreenReaderEnabled } from '../hooks/useAccessibilityFocus';
@@ -46,6 +54,7 @@ const BLOOD_GROUPS = [
 
 export default function DemoScreen() {
   const say = useAnnounce();
+  const [filter, setFilter] = useState('all');
   const screenReaderOn = useScreenReaderEnabled();
   const { preferences, set } = usePreferences();
 
@@ -96,12 +105,19 @@ export default function DemoScreen() {
   }
 
   return (
-    <Screen>
-      <ScreenHeader
-        title="Component kit"
-        subtitle="Every accessible building block the app is made from."
-        voicePurpose="A test rig for every accessible component in the app."
-      />
+    <Screen
+      bar={
+        <ScreenHeader
+          layout="bar"
+          title="Component kit"
+          back
+          voicePurpose="A test rig for every accessible component in the app."
+        />
+      }
+    >
+      <AppText variant="caption" color={colors.textMuted} style={styles.lead}>
+        Every accessible building block the app is made from.
+      </AppText>
 
       {/* One live region for the whole screen, near the top where focus starts. */}
       <LiveMessage message={status} tone={tone} />
@@ -169,14 +185,19 @@ export default function DemoScreen() {
         <AppText variant="display">Display</AppText>
         <AppText variant="title">Title</AppText>
         <AppText variant="heading">Heading</AppText>
+        <AppText variant="sectionTitle">Section title</AppText>
         <AppText variant="subheading">Subheading</AppText>
         <AppText variant="body">Body — the default. Grows with the OS text size setting.</AppText>
         <AppText variant="caption" color={colors.textMuted}>
-          Caption — still 6.58 to 1 against white, because muted must not mean unreadable.
+          Caption — still 7.8 to 1 against white, because muted must not mean unreadable.
+        </AppText>
+        <AppText variant="footnote" color={colors.textMuted}>
+          Footnote — the 12px meta line on a card: a timestamp, a count, a hint.
         </AppText>
         <AppText variant="body" color={colors.textMuted} style={styles.note}>
-          The first four are exposed as headings, so the VoiceOver rotor and TalkBack heading
-          navigation can jump between them.
+          Display and the section title are Playfair; everything else is Poppins. The first
+          five are exposed as headings, so the VoiceOver rotor and TalkBack heading navigation
+          can jump between them.
         </AppText>
       </Card>
 
@@ -222,6 +243,26 @@ export default function DemoScreen() {
         <AppButton title="Disabled action" disabled onPress={() => {}} />
         <View style={styles.gap} />
         <AppButton
+          title="Quiet action"
+          variant="neutral"
+          onPress={() => {
+            setTone('info');
+            setStatus('Quiet action pressed.');
+          }}
+          accessibilityHint="Demonstrates the neutral button, for an action that is not a brand statement"
+        />
+        <View style={styles.gap} />
+        <AppButton
+          title="Call this donor"
+          shape="pill"
+          icon="phone"
+          uppercase={false}
+          fullWidth={false}
+          onPress={() => say('Calling')}
+          accessibilityHint="Demonstrates the pill shape used for an action inside a card"
+        />
+        <View style={styles.gap} />
+        <AppButton
           title="Resend code"
           variant="link"
           size="small"
@@ -229,8 +270,10 @@ export default function DemoScreen() {
         />
 
         <AppText variant="caption" color={colors.textMuted} style={styles.note}>
-          Every one is at least 48 by 48. The loading button keeps its label and reports
-          "busy"; the disabled one reports "dimmed" rather than just looking faded.
+          Every one has a touch target of at least 48 by 48, including the small ones, which
+          are visually shorter and make the rest up in hitSlop. The loading button keeps its
+          label and reports "busy"; the disabled one reports "dimmed" rather than just looking
+          faded.
         </AppText>
       </Card>
 
@@ -453,13 +496,160 @@ export default function DemoScreen() {
           result instead of three unconnected fragments.
         </AppText>
       </Card>
+
+      {/* --- Tiles, chips and section headings ---------------------------- */}
+
+      <SectionHeading
+        overline="PRESENTATION"
+        title="Tiles and badges"
+        description="The pieces the screens are laid out from, rather than the controls they contain."
+        onViewAll={() => say('A section heading can carry a View all link')}
+        viewAllLabel="of this demonstration"
+        style={styles.note}
+      />
+
+      <ActionRow>
+        <ActionTile
+          title="Primary tile"
+          description="The one thing this screen is for."
+          icon="search"
+          tone="primary"
+          onPress={() => say('Primary tile')}
+        />
+        <ActionTile
+          title="Tinted tile"
+          description="The second action, on a blush fill."
+          icon="drop"
+          tone="tint"
+          onPress={() => say('Tinted tile')}
+        />
+      </ActionRow>
+
+      <View style={styles.gap} />
+
+      <ActionTile
+        layout="row"
+        title="Menu row"
+        description="A whole list of settings, without eleven cards."
+        icon="sliders"
+        onPress={() => say('Menu row')}
+      />
+
+      <Card title="Badges">
+        <View style={styles.row}>
+          <Chip label="O positive" tone="tint" />
+          <Chip label="Available" tone="success" icon="check" />
+          <Chip label="Closed" tone="neutral" />
+          <Chip label="Urgent" tone="error" />
+        </View>
+        <AppText variant="caption" color={colors.textMuted} style={styles.note}>
+          Every one carries a word. Colour alone is not allowed to say anything, and to a
+          blind user a tone does not exist at all.
+        </AppText>
+      </Card>
+
+      <Card title="Filter rail">
+        <AppText variant="body" color={colors.textMuted} style={styles.note}>
+          Mutually exclusive views of one list, so the rail is a tab list and each pill reports
+          whether it is selected. Selection changes the outline, the weight and the fill at once,
+          so it is legible in greyscale as well.
+        </AppText>
+        <ChipRail
+          surface={false}
+          accessibilityLabel="Demonstration filter"
+          value={filter}
+          onChange={setFilter}
+          items={[
+            { value: 'all', label: 'All' },
+            { value: 'open', label: 'Open' },
+            { value: 'closed', label: 'Closed' },
+            { value: 'expired', label: 'Expired' },
+          ]}
+          style={styles.railDemo}
+        />
+      </Card>
+
+      <Card title="Row blocks">
+        <AppText variant="body" color={colors.textMuted} style={styles.note}>
+          What a list is made of: a full-bleed white block on a neutral page, with its state on a
+          tinted strip along the top. Shown inset here because this card is not that page.
+        </AppText>
+      </Card>
+
+      <RowBlock
+        status={{ label: 'Open', tone: 'brand' }}
+        statusMeta="2 hours ago"
+        onPress={() => {
+          setTone('info');
+          setStatus('Row block activated.');
+        }}
+        accessibilityLabel="Open. O positive for City Hospital. 4 donors alerted. Posted 2 hours ago."
+        accessibilityHint="Opens this request"
+        style={styles.blockDemo}
+      >
+        <AppText variant="label">O positive · City Hospital</AppText>
+        <AppText variant="footnote" color={colors.textMuted}>
+          4 donors alerted
+        </AppText>
+      </RowBlock>
+
+      <Card title="Band shortcuts">
+        <AppText variant="body" color={colors.textMuted} style={styles.note}>
+          The strip inside the red band. Translucent, so it sits in the gradient rather than
+          cutting rectangles out of it — which is why it is shown on red here.
+        </AppText>
+      </Card>
+
+      <View style={styles.bandDemo}>
+        <QuickActions
+          items={[
+            { key: 'a', label: 'Request blood', icon: 'drop', onPress: () => say('Request blood') },
+            { key: 'b', label: 'Your requests', icon: 'list', onPress: () => say('Your requests') },
+            { key: 'c', label: 'Find donors', icon: 'search', onPress: () => say('Find donors') },
+          ]}
+        />
+      </View>
+
+      <Card title="Search entry">
+        <AppText variant="body" color={colors.textMuted} style={styles.note}>
+          The box from the home band. It is a button, not a field — it announces itself as one
+          and opens the screen that owns the search.
+        </AppText>
+        <SearchEntry
+          label="Find blood donors near you"
+          accessibilityLabel="Find blood donors"
+          onPress={() => say('Opens the donor search')}
+          style={styles.searchDemo}
+        />
+      </Card>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  /**
+   * The line that used to be the header's subtitle.
+   *
+   * GMP's screen bar holds a title and nothing else, so the sentence moved into the page as a
+   * lead paragraph. It is still read right after the heading and it is still one swipe away for
+   * a screen reader; it is just no longer 40px of white-on-red that pushes the content down.
+   */
+  lead: { marginBottom: spacing.xl },
   gap: { height: spacing.md },
   switch: { marginTop: spacing.md },
   note: { marginTop: spacing.md },
   row: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md, flexWrap: 'wrap' },
+  // On the band it sits on red; here it needs an edge, or a white box on a white card is not
+  // a box at all.
+  searchDemo: { borderWidth: 1, borderColor: colors.borderMuted },
+  // The rail and the block are full-bleed in use, so the demo cancels the page gutter to show
+  // them the width they are actually drawn at.
+  railDemo: { marginHorizontal: -spacing.lg, marginTop: spacing.md },
+  blockDemo: { marginHorizontal: -spacing.lg },
+  bandDemo: {
+    backgroundColor: colors.brand,
+    marginHorizontal: -spacing.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+  },
 });

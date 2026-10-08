@@ -179,6 +179,7 @@ export default function OtpScreen() {
         <>
           <ScreenHeader
             title="Verify phone number"
+            back
             subtitle="Enter the one time password we sent you."
             tone="brand"
             voicePurpose={`Enter the ${OTP_LENGTH_WORD} digit code we texted you. It may fill in on its own.`}

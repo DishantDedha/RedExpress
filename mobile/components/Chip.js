@@ -23,7 +23,7 @@ import { colors, spacing, radius } from '../theme';
  */
 
 const TONES = {
-  /** The default: a blush fill carrying the deep red. 8.51:1. */
+  /** The default: a blush fill carrying the deep red. 7.36:1. */
   tint: { bg: colors.primaryTint, fg: colors.primaryOnTint, border: 'transparent' },
   /** A filled red pill for the one thing on a card that matters most. */
   solid: { bg: colors.primary, fg: colors.onPrimary, border: 'transparent' },
@@ -64,14 +64,22 @@ export function Chip({
           backgroundColor: palette.bg,
           borderColor: border,
           borderWidth: border === 'transparent' ? 0 : contrast.width(1),
-          paddingVertical: small ? spacing.xs : spacing.sm - 2,
+          paddingVertical: small ? 2 : spacing.xs,
           paddingHorizontal: small ? spacing.sm : spacing.md,
         },
         style,
       ]}
     >
-      {icon ? <Icon name={icon} size={small ? 12 : 14} color={palette.fg} style={styles.icon} /> : null}
-      <AppText variant={small ? 'caption' : 'label'} color={palette.fg} style={styles.label}>
+      {icon ? <Icon name={icon} size={small ? 11 : 13} color={palette.fg} style={styles.icon} /> : null}
+      {/* GMP's badges are tight: a 12px line in a pill with 4px of air above and below it, not
+          a 15px one with 6. A chip is an annotation on something else, and at the old size it
+          competed with the card title it was annotating. */}
+      <AppText
+        variant="footnote"
+        weight={small ? 'semibold' : 'bold'}
+        color={palette.fg}
+        style={styles.label}
+      >
         {label}
       </AppText>
     </View>

@@ -13,11 +13,10 @@ import { colors, spacing } from '../../../theme';
 export default function DonateScreen() {
   return (
     <Screen
-      hero={
+      bar={
         <ScreenHeader
+          layout="bar"
           title="Donate"
-          subtitle="Support Red Express with a contribution via UPI."
-          tone="brand"
           voicePurpose="Scan the QR code shown here with any UPI app to make a contribution."
         />
       }

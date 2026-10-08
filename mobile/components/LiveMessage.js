@@ -174,7 +174,9 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
+    // The same 12 as a card and a field. A banner at 8 next to a field at 12 reads as a
+    // different kit.
+    borderRadius: radius.lg,
     marginTop: spacing.sm,
   },
   bare: { paddingVertical: spacing.xs, paddingHorizontal: 0 },

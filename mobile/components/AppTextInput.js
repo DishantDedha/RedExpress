@@ -127,13 +127,13 @@ export const AppTextInput = forwardRef(function AppTextInput(
       ? colors.error
       : focused
         ? // On red, the red focus ring is invisible against the background; white is the
-          // focus indicator there, at 7.33:1.
+          // focus indicator there, at 5.98:1.
           brand
           ? colors.onPrimary
           : colors.focusRing
         : brand
           ? colors.onPrimary
-          : // High contrast turns the 3.45:1 grey outline near-black. The brand surface is
+          : // High contrast turns the 3.69:1 grey outline near-black. The brand surface is
             // left alone: its white border is already the highest-contrast edge available on
             // deep red.
             contrast.border(colors.border);
@@ -179,7 +179,16 @@ export const AppTextInput = forwardRef(function AppTextInput(
           editable={!disabled}
           multiline={multiline}
           placeholder={placeholder}
-          placeholderTextColor={colors.textMuted}
+          /**
+           * Neutral-500, not `textMuted`.
+           *
+           * A placeholder here is an example value ("9876543210"), and the field's name is
+           * always visible above it, so this grey is carrying no information anyone needs. At
+           * `textMuted` — which is neutral-600 — an example looked like a value the user had
+           * already typed, which is the opposite of what an example is for. Neutral-500 is
+           * still 4.74:1, so it is readable as text; it just stops pretending to be input.
+           */
+          placeholderTextColor={colors.neutralRamp[500]}
           accessibilityLabel={composedLabel}
           accessibilityHint={accessibilityHint ?? helperText}
           accessibilityState={{ disabled }}
@@ -201,7 +210,7 @@ export const AppTextInput = forwardRef(function AppTextInput(
       <View accessibilityLiveRegion="polite">
         {error ? (
           <AppText
-            variant="caption"
+            variant="footnote"
             color={colors.error}
             // On red, error text needs its own light background to sit on — the error red
             // and the brand red are all but the same colour.
@@ -211,7 +220,7 @@ export const AppTextInput = forwardRef(function AppTextInput(
             Error: {error}
           </AppText>
         ) : helperText ? (
-          <AppText variant="caption" color={helperColor} style={styles.message}>
+          <AppText variant="footnote" color={helperColor} style={styles.message}>
             {helperText}
           </AppText>
         ) : null}
@@ -223,15 +232,16 @@ export const AppTextInput = forwardRef(function AppTextInput(
 const styles = StyleSheet.create({
   container: { marginBottom: spacing.lg },
   label: { marginBottom: spacing.xs },
+  /** GMP's field: a 12px radius and 16px of air inside it, not 8 and 12. */
   field: {
     backgroundColor: colors.card,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     // The container guarantees the 48dp target; the input inside is free to be shorter.
     minHeight: a11y.minTouchTarget,
     justifyContent: 'center',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
-  fieldDisabled: { backgroundColor: colors.background },
+  fieldDisabled: { backgroundColor: colors.surface },
   fieldMultiline: { minHeight: a11y.minTouchTarget * 2, paddingVertical: spacing.sm },
   input: {
     ...typography.body,

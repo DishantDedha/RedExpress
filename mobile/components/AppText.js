@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import { Text } from 'react-native';
 import { usePreferencesSnapshot } from '../hooks/usePreferences';
-import { colors, typography, a11y, highContrast } from '../theme';
+import { colors, typography, fonts, a11y, highContrast } from '../theme';
 
 /**
  * Every piece of text in the app goes through here.
  *
- * Three reasons it exists rather than screens using `Text` directly:
+ * Four reasons it exists rather than screens using `Text` directly:
  *
  *  1. Font scaling. `allowFontScaling` is left at its default `true` — deliberately, and
  *     it must stay that way. Turning it off is the single most common accessibility bug in
@@ -19,9 +19,13 @@ import { colors, typography, a11y, highContrast } from '../theme';
  *     jumping heading to heading (the VoiceOver rotor, TalkBack's heading navigation). Text
  *     that only *looks* like a heading is not one, so the `variant` decides the role.
  *
- *  3. The "big text" and "high contrast" preferences (Phase 11). Both are applied here, once,
- *     rather than by each screen — which is the difference between a preference that works
+ *  3. The "big text" and "high contrast" preferences. Both are applied here, once, rather
+ *     than by each screen — which is the difference between a preference that works
  *     everywhere and one that works on the screens somebody remembered to update.
+ *
+ *  4. The typeface. Every variant carries its own `fontFamily` (see `theme/index.js`), so
+ *     Poppins and Playfair reach the whole app from one place and no screen has to know
+ *     which cut it wants.
  *
  * ## How the two preferences apply
  *
@@ -37,14 +41,33 @@ import { colors, typography, a11y, highContrast } from '../theme';
  *
  * A colour passed in a `style` prop bypasses this, which is why components pass `color` and
  * not `style={{ color }}`.
+ *
+ * ## Weight is a family, not a `fontWeight`
+ *
+ * `weight` picks one of the loaded Poppins cuts by name. It exists because a variant's size
+ * and its weight are not always wanted together — a 16px line that needs to be semibold is
+ * `variant="body" weight="semibold"`, not a new variant.
+ *
+ * Setting `fontWeight` in a `style` prop instead does nothing useful: the families are
+ * single-weight, so iOS ignores it and Android fakes it badly. There is no guard against it
+ * here, only this note and the fact that nothing in the app does it.
  */
 
-const HEADING_VARIANTS = new Set(['display', 'title', 'heading', 'subheading']);
+const HEADING_VARIANTS = new Set([
+  'hero',
+  'display',
+  'title',
+  'heading',
+  'sectionTitle',
+  'subheading',
+]);
 
 export function AppText({
   variant = 'body',
   color,
   align,
+  /** One of `theme.fonts` — 'body', 'medium', 'semibold', 'bold', 'display'. */
+  weight,
   style,
   children,
   // A heading that should not be exposed as one — rare, but a card title inside a list item
@@ -62,13 +85,16 @@ export function AppText({
   const isHeading = HEADING_VARIANTS.has(variant);
 
   const scaled = useMemo(() => {
-    if (!bigText) return base;
+    const family = weight ? (fonts[weight] ?? base.fontFamily) : base.fontFamily;
+    const withFamily = family === base.fontFamily ? base : { ...base, fontFamily: family };
+
+    if (!bigText) return withFamily;
     return {
-      ...base,
-      fontSize: Math.round(base.fontSize * a11y.bigTextScale),
-      lineHeight: Math.round(base.lineHeight * a11y.bigTextScale),
+      ...withFamily,
+      fontSize: Math.round(withFamily.fontSize * a11y.bigTextScale),
+      lineHeight: Math.round(withFamily.lineHeight * a11y.bigTextScale),
     };
-  }, [base, bigText]);
+  }, [base, bigText, weight]);
 
   const resolved = color ?? colors.text;
   const finalColor = hc ? (highContrast.text[resolved] ?? resolved) : resolved;

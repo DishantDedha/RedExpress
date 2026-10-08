@@ -26,13 +26,20 @@ export default function TermsScreen() {
   const say = useAnnounce();
 
   return (
-    <Screen>
-      <ScreenHeader
-        title="Terms and conditions"
-        subtitle="The agreement between you and Red Express. Last updated 25 August 2026."
-        voicePurpose="This screen explains the rules for using Red Express, including that it is free and is not a medical service."
-        voiceAction="Read the terms, or go back to continue registering"
-      />
+    <Screen
+      bar={
+        <ScreenHeader
+          layout="bar"
+          title="Terms and conditions"
+          back
+          voicePurpose="This screen explains the rules for using Red Express, including that it is free and is not a medical service."
+          voiceAction="Read the terms, or go back to continue registering"
+        />
+      }
+    >
+      <AppText variant="caption" color={colors.textMuted} style={styles.lead}>
+        The agreement between you and Red Express. Last updated 25 August 2026.
+      </AppText>
 
       <Card title="What Red Express is">
         <Item
@@ -181,6 +188,14 @@ function Item({ label, detail, last = false }) {
 }
 
 const styles = StyleSheet.create({
+  /**
+   * The line that used to be the header's subtitle.
+   *
+   * GMP's screen bar holds a title and nothing else, so the sentence moved into the page as a
+   * lead paragraph. It is still read right after the heading and it is still one swipe away for
+   * a screen reader; it is just no longer 40px of white-on-red that pushes the content down.
+   */
+  lead: { marginBottom: spacing.xl },
   item: { marginBottom: spacing.lg },
   detail: { marginTop: spacing.xs },
   action: { marginTop: spacing.md },

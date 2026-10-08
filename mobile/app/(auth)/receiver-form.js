@@ -192,6 +192,7 @@ export default function ReceiverFormScreen() {
       hero={
         <ScreenHeader
           title="Find Blood"
+          back
           subtitle="A few details so we can reach donors near you."
           tone="brand"
           voicePurpose="Four details so we can reach donors near you: your name, your state, your district and your mobile number."

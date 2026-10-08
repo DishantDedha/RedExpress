@@ -168,11 +168,11 @@ export const AppSelect = forwardRef(function AppSelect(
 
       <View accessibilityLiveRegion="polite">
         {error ? (
-          <AppText variant="caption" color={colors.error} style={styles.message}>
+          <AppText variant="footnote" color={colors.error} style={styles.message}>
             Error: {error}
           </AppText>
         ) : helperText ? (
-          <AppText variant="caption" color={colors.textMuted} style={styles.message}>
+          <AppText variant="footnote" color={colors.textMuted} style={styles.message}>
             {helperText}
           </AppText>
         ) : null}
@@ -291,13 +291,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: colors.card,
-    borderRadius: radius.md,
+    // Same radius and inner padding as AppTextInput — a select and a text field sitting in one
+    // form have to be the same shape, or the form looks assembled rather than designed.
+    borderRadius: radius.lg,
     minHeight: a11y.minTouchTarget,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
   triggerPressed: { backgroundColor: colors.primaryTint },
-  triggerDisabled: { backgroundColor: colors.background },
+  triggerDisabled: { backgroundColor: colors.surface },
   triggerText: { flexShrink: 1, marginRight: spacing.sm },
   message: { marginTop: spacing.xs },
 

@@ -7,7 +7,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "scheme": "redexpress",
-    "backgroundColor": "#F7F7F9",
+    "backgroundColor": "#FFFFFF",
     "icon": "./assets/icon.png",
     "assetBundlePatterns": [
       "**/*"
@@ -24,7 +24,7 @@
       "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#B00020"
+        "backgroundColor": "#C31D1C"
       },
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -56,7 +56,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#B00020",
+          "color": "#E02826",
           "defaultChannel": "blood-requests"
         }
       ],
@@ -66,7 +66,7 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#B00020"
+          "backgroundColor": "#C31D1C"
         }
       ]
     ],

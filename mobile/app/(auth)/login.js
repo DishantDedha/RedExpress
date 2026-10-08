@@ -130,6 +130,7 @@ export default function LoginScreen() {
       hero={
         <ScreenHeader
           title="Sign in"
+          back
           subtitle="Enter your mobile number and password."
           tone="brand"
           voicePurpose="Enter your ten digit mobile number and your password to sign in."

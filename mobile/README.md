@@ -57,7 +57,8 @@ mobile/
     demo.js                   the component kit, on one screen
     (auth)/                   login · register · phone · otp · donor-form · receiver-form
     (app)/                    the signed-in stack, behind the token guard
-      (tabs)/                 home · find-donors · notifications · profile — the bottom bar
+      (tabs)/                 home · donate · notifications · profile — the bottom bar
+                              (find-donors lives here too, off the bar)
       post-request.js         pushed over the tabs, with a back button
       settings.js             accessibility preferences
       privacy.js              what we know about you, and who can see it
@@ -73,6 +74,7 @@ mobile/
   utils/call.js               tel: links, with every failure announced
   utils/form.js               ordered validation, and "announce + focus the first error"
   theme/index.js              every colour, space and size in the app
+  theme/fonts.js              Poppins and Playfair Display, and the hook that loads them
   scripts/check-contrast.mjs  the WCAG gate
   docs/accessibility.md       the audit, the manual test steps, and the known gaps
 ```
@@ -120,26 +122,67 @@ the session and routing to sign-in with a spoken explanation.
 
 ### Theme
 
-One file: [`theme/index.js`](theme/index.js). Screens never hard-code a colour or a size.
+Two files: [`theme/index.js`](theme/index.js) for the tokens and
+[`theme/fonts.js`](theme/fonts.js) for the typefaces they name. Screens never hard-code a
+colour or a size.
+
+**The palette is GMP's.** Red Express and the GMP storefront app are built by the same team and
+now read as one family: the same brand ramp (`#E02826` and its 50–900 tints), the same Tailwind
+neutrals, the same radii, the same two typefaces, and the same bottom bar. Three tokens
+deliberately take a darker value than GMP's — muted text, the input outline, and the status
+colours — because GMP has no contrast gate and those three would not survive one. The header of
+`theme/index.js` says which and why.
+
+**The typefaces are Poppins and Playfair Display**, loaded through `theme/fonts.js` and held
+behind the splash screen until they arrive. Every weight is its own loaded family, named in
+`theme.fonts` and attached to a `typography` variant: React Native cannot synthesise a weight
+from a single-weight family, so `fontWeight` does nothing useful here and appears nowhere in the
+app. Use `<AppText weight="semibold">` when a variant's size is right and its weight is not.
 
 The palette is **verified, not eyeballed**. `npm run verify:contrast` reads the real tokens out
-of the theme and checks all 67 foreground/background pairs the UI renders against WCAG 2.1 —
+of the theme and checks all 72 foreground/background pairs the UI renders against WCAG 2.1 —
 4.5:1 for text, 3:1 for input outlines and focus rings, and **7:1 (AAA) for every pair the
-high-contrast preference substitutes in** — and exits non-zero on a failure. It caught one
-during Phase 7: the input border passed at 3.15:1 on a white card but fell to 2.95:1 on the
-grey screen background, where forms outside a card actually sit.
+high-contrast preference substitutes in** — and exits non-zero on a failure. It is what settled
+every judgement call in the GMP alignment: the hero band starts at the brand 700 rather than the
+600 because on `#E02826` the only AA foreground is pure white, which leaves a band with no
+second voice on it.
 
-**Two surfaces, two foreground sets.** The app surface is light with dark text. The other is
+**Two surfaces, two foreground sets.** The app surface is white with dark text. The other is
 red, and the entire light-surface set — `text`, `textMuted`, `border`, `focusRing` — is
 unreadable on it. There, use `colors.onPrimary` for anything that matters and
-`colors.onBrandMuted` (6.32:1 on `brand`, 5.44:1 on the lightest gradient stop) for supporting
+`colors.onBrandMuted` (4.93:1 on `brand`, which is the lightest gradient stop) for supporting
 copy. The surface is chosen by a prop rather than a per-screen style block precisely so a
 screen cannot end up red with dark body text on it.
 
+**A red label on a blush surface is `primaryOnTint`, not `primary`.** The brand red on its own
+50 tint is 4.27:1. Every component that presses into a blush fill swaps its label with it — see
+`fgPressed` in `AppButton`.
+
 **Where the red actually is.** Every screen used to be red edge to edge before sign-in. Now the
-red is a *band*: `<Screen hero={…}>` paints a gradient across the top carrying the screen's
-title, and everything below it sits on a white sheet with rounded top corners. Everything a
-user has to read, fill in or scan is on white; the brand owns the band.
+red is chrome at the top, in one of two sizes:
+
+| | What it is | Who uses it |
+| --- | --- | --- |
+| `<Screen bar={…}>` | GMP's compact strip — a 20px white title, a white circular back button, about 60px above the safe area. Pinned; the content scrolls under it | Almost everything |
+| `<Screen hero={…}>` | The tall band: a 24px title, a line of copy, and room for a search box and chips under them, with a white sheet tucked below on rounded corners | Home, the landing, the sign-in flow |
+
+Everything a user has to read, fill in or scan is on white; the brand owns the chrome.
+
+The app used `hero` everywhere, and that was the single biggest reason it looked heavy: a 24px
+title plus a sentence of subtitle plus 56px of top padding is 140px of chrome on a screen whose
+job is to show a list. On a short phone, a third of the viewport spent restating the name of the
+thing you just tapped.
+
+**There is no native header anywhere.** It used to be kept for its back button, drawn transparent
+so it floated over the band — which is why the band carried 56px of top padding, to keep its title
+out from under an arrow sitting exactly where the title wanted to be. `ScreenHeader` draws the
+button itself now, as a white disc inside the red. The platform back *gesture* is unaffected: it
+does not come from the header.
+
+**A list is blocks, not cards.** `RowBlock` is full-bleed white on a `page="muted"` screen, and
+the 8px of page showing between two blocks is the only separator. The lists were inset, rounded,
+bordered, shadowed cards — eight down a screen is eight floating objects with sixteen visible
+edges, which reads as clutter whatever colour anything is.
 
 That is a legibility decision as much as a visual one. A text input on a saturated background
 has to invert its outline, its label, its helper text and its error state, and every one of
@@ -169,19 +212,24 @@ screen in Phases 8–11 inherits it rather than being audited and patched one at
 | `PhotoPicker` | Every outcome stated and announced: selected, cancelled, too large, removed; the preview image is hidden as decoration |
 | `LocationCapture` | The permission rationale next to the button that triggers it; granted, denied, blocked and failed each announce and say what happens instead |
 | `BrandMark` | The logo, drawn rather than bitmapped; decorative parts hidden, and it can *be* the screen heading rather than competing with one |
-| `ScreenHeader` | Moves screen-reader focus to the heading on every screen entry — built in, so it cannot be forgotten |
-| `Card` | Optional `grouped` mode so a result announces as one phrase instead of four fragments; `onPress` makes it a real button |
+| `ScreenHeader` | Moves screen-reader focus to the heading on every screen entry — built in, so it cannot be forgotten. `layout="bar"` is GMP's compact red strip with a white circular back button, which is what most screens want; `layout="block"` is the tall band version, for Home, the landing and the sign-in flow |
+| `Card` | A rounded, bordered panel inset from both edges. Optional `grouped` mode so a result announces as one phrase instead of four fragments; `onPress` makes it a real button |
+| `RowBlock` | One row of a list, GMP's way: full-bleed white on a neutral page, state on a tinted strip across the top, and the 8px of page above it as the only separator. What the alerts and requests lists are built from |
+| `ChipRail` | A sideways rail of pills. As a filter it is a real tab list reporting `selected`; as navigation, a row of buttons. GMP's filter row, and the blood-group rail on Home |
+| `QuickActions` | The strip of translucent shortcuts inside the red band — the element that makes a header a place you do something rather than a coloured rectangle with a name in it |
 | `DonorCard` | A search result as **two** stops — one spoken summary, one Call button — not six fragments per donor |
 | `PushConsent` | The notification rationale *before* the one-shot OS prompt; renders nothing once alerts are on |
 | `DictationButton` | Speak a field instead of typing it. Renders **nothing at all** unless the optional native module is installed and the user has switched dictation on |
 | `Screen` | Safe areas, keyboard avoidance, and scrolling — so a form still works at 200% text size. Also the red hero band and the white sheet under it |
 | `LiveMessage` | Announces async events ("3 donors found") **and** renders them |
-| `Gradient` | The brand ramp, stacked from plain `View`s. Hides itself from the accessibility tree, and flattens to one dark fill under high contrast |
+| `Gradient` | A ramp, stacked from plain `View`s. Hides itself from the accessibility tree, and flattens to one dark fill under high contrast |
+| `BottomTabBar` | The bar from the GMP app: a near-black red slab with rounded top corners and the selected tab lifted onto a pale disc. Labels stay visible on every tab, selected included, and its height is computed from the current text size so they cannot clip |
+| `SearchEntry` | The white box in the hero band. A **button**, not a field — it announces itself as one and opens the screen that owns the search |
 | `Icon` | Twelve glyphs drawn from `View`s — no font, so **nothing a screen reader can try to pronounce**. Decorative unconditionally; there is no prop to change that |
 | `Chip` | A labelled pill. Every tone carries a word, never a colour alone |
-| `ActionTile` | A large labelled button with an icon and a description — one focus stop, the description as its hint. What replaced the column of identical buttons on Home |
+| `ActionTile` | A labelled button with an icon and a description — one focus stop, the description as its hint. `layout="stacked"` is the two-up hero tile; `layout="row"` is GMP's menu row, which is what the settings and policy lists use |
 | `Avatar` | Initials in a circle. Decorative and hidden; the **one** place in the app that turns font scaling off, and only because it scales the whole circle by hand instead |
-| `SectionHeading` | A real `header` role above each group, so a long screen is navigable by rotor rather than only by swiping |
+| `SectionHeading` | GMP's uppercase Playfair section title, with an optional "View all" link. A real `header` role above each group, so a long screen is navigable by rotor rather than only by swiping — and the caps are set by the style, so what is *spoken* is still the sentence |
 
 Two decisions worth knowing before you extend this:
 
@@ -272,9 +320,9 @@ here would mean telling the user a number is fine and then having the server dis
 
 ### Two smaller ones
 
-- **The mockup's dark-red "Send OTP" button is not what shipped.** `#8C0019` on `#B00020` is
-  1.34:1, so the button's *edge* — the thing you must see to know a control is there — fails WCAG
-  1.4.11. `AppButton variant="brand"` inverts it to a white fill with a red label at 7.33:1,
+- **The mockup's dark-red "Send OTP" button is not what shipped.** The brand 800 on the 700 is
+  1.33:1, so the button's *edge* — the thing you must see to know a control is there — fails WCAG
+  1.4.11. `AppButton variant="brand"` inverts it to a white fill with a red label at 4.67:1,
   which is how mockup 1 already draws its own buttons.
 - **All-caps text is given a sentence-case label.** Both readers tend to spell short all-caps
   strings out letter by letter, so `EMERGENCY BLOOD HELPLINE` and `WE4YOU` keep their capitals on
@@ -522,7 +570,7 @@ On **Home → Accessibility settings**, persisted in `services/preferences.js`:
 | --- | --- |
 | **Voice guidance** | The app reads each screen's purpose and every confirmation aloud with `expo-speech` — for users who have not set a screen reader up, which is most newly blind users and anyone on a shared family phone |
 | **Big text** | Every font size and **line height** × 1.3, on top of the OS setting rather than replacing it |
-| **High contrast** | Muted greys dropped (6.58:1 → 17.17:1), outlines near-black and 2px, primary fill darkened to AAA, buttons 48dp → 56dp |
+| **High contrast** | Muted greys dropped (7.82:1 → 17.90:1), outlines near-black and 2px, primary fill darkened to AAA, buttons 48dp → 56dp |
 
 **Voice guidance never double-speaks.** With a screen reader running it stays silent for screen
 introductions and hands every message back to the reader, so a message is heard exactly once by
