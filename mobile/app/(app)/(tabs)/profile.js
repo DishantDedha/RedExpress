@@ -318,7 +318,10 @@ export default function ProfileScreen() {
       say(result.message);
     } catch (error) {
       hapticError();
-      setDonationError(error.message);
+      // `date` is what the API calls this field (backend/src/validation/profileSchemas.js).
+      // On a validation failure the top-level message is the generic "Please check the
+      // highlighted fields"; the sentence worth reading is in `fields`.
+      setDonationError(error.fields?.date ?? error.message);
     } finally {
       setDonationBusy(false);
     }

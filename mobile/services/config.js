@@ -79,8 +79,8 @@ export const config = {
   enableVoiceInput: process.env.EXPO_PUBLIC_ENABLE_VOICE_INPUT === 'true',
 
   /** How long to wait on a request before giving up. Emergency use — a spinner that never
-   *  resolves is worse than a clear failure the user can retry. 30s, not 15s, because the
-   *  free-tier backend can take 20+ seconds to wake from a cold start. */
+   *  resolves is worse than a clear failure the user can retry. 30s, not 15s: the dedicated
+   *  server has no cold start any more, but a donor on rural 3G still does. */
   requestTimeoutMs: 30000,
 };
 

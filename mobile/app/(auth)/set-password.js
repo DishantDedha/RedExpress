@@ -75,7 +75,27 @@ export default function SetPasswordScreen() {
       router.replace('/home');
     } catch (error) {
       setSaving(false);
-      fail('confirmPassword', error.message);
+
+      /**
+       * A validation failure arrives as `{ code: 'VALIDATION_ERROR', message: 'Please check
+       * the highlighted fields.', fields: { password: '…' } }` — the useful sentence is in
+       * `fields`, and the top-level message is deliberately generic because it does not know
+       * which field it is about.
+       *
+       * This used to do `fail('confirmPassword', error.message)`, which showed "Please check
+       * the highlighted fields" under *Confirm password* no matter what was actually wrong,
+       * and moved the screen-reader cursor to the wrong input. Both halves mattered: the
+       * person was told nothing, and then sent to the field that was fine.
+       */
+      const field = ['password', 'confirmPassword'].find((name) => error.fields?.[name]);
+      if (field) {
+        fail(field, error.fields[field]);
+        return;
+      }
+
+      // Nothing field-specific — a network failure, or a code this screen does not know.
+      // Shown on the password field because that is the one the person would have to change.
+      fail('password', error.message);
     }
   }
 

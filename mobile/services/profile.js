@@ -78,10 +78,29 @@ export async function registerDonor(values) {
   return result;
 }
 
-/** The quick receiver form (mockup 7). No file, so plain JSON. */
+/**
+ * The quick receiver form (mockup 7). No file, so plain JSON.
+ *
+ * The key list is an allow-list, so a field missing from it is dropped silently — which is
+ * exactly what happened to `password` and `confirmPassword` when the receiver flow gained a
+ * sign-in credential and this list was not updated alongside `registerDonor`'s. The form
+ * collected both, this function discarded them, and `receiverRegisterSchema` rejected the
+ * request with "Enter a password." about a field the user had visibly filled in.
+ */
 export async function registerReceiver(values) {
   const body = {};
-  for (const key of ['fullName', 'state', 'district', 'city', 'email', 'phone', 'latitude', 'longitude']) {
+  for (const key of [
+    'fullName',
+    'state',
+    'district',
+    'city',
+    'email',
+    'phone',
+    'latitude',
+    'longitude',
+    'password',
+    'confirmPassword',
+  ]) {
     const value = values[key];
     if (value === undefined || value === null || value === '') continue;
     body[key] = value;

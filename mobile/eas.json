@@ -19,7 +19,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://redexpress-api.onrender.com",
+        "EXPO_PUBLIC_API_BASE_URL": "https://api.getablood.com",
         "EXPO_PUBLIC_SUPPORT_EMAIL": "dishantdedha@gmail.com",
         "EXPO_PUBLIC_ENABLE_VOICE_INPUT": "false",
         "EXPO_PUBLIC_MSG91_WIDGET_ID": "366876676642313737363231",
@@ -33,7 +33,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://redexpress-api.onrender.com",
+        "EXPO_PUBLIC_API_BASE_URL": "https://api.getablood.com",
         "EXPO_PUBLIC_SUPPORT_EMAIL": "dishantdedha@gmail.com",
         "EXPO_PUBLIC_ENABLE_VOICE_INPUT": "false",
         "EXPO_PUBLIC_MSG91_WIDGET_ID": "366876676642313737363231",

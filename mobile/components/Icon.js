@@ -430,6 +430,64 @@ function Heart({ size, color }) {
   );
 }
 
+/**
+ * An open eye: a lens outline with a filled pupil. Used only on the "show password" toggle,
+ * where the Pressable around it carries the name — see AppTextInput.
+ */
+function Eye({ size, color }) {
+  const w = size * 0.88;
+  const h = size * 0.56;
+  const stroke = Math.max(2, size * 0.09);
+  const pupil = size * 0.24;
+
+  return (
+    <View style={styles.fill}>
+      <View
+        style={{
+          position: 'absolute',
+          width: w,
+          height: h,
+          // Half the height makes the ends semicircular, which reads as a lens rather than
+          // as a rounded rectangle.
+          borderRadius: h / 2,
+          borderWidth: stroke,
+          borderColor: color,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          width: pupil,
+          height: pupil,
+          borderRadius: pupil / 2,
+          backgroundColor: color,
+        }}
+      />
+    </View>
+  );
+}
+
+/** The same eye struck through — "hide". The bar is drawn last so it sits over the lens. */
+function EyeOff({ size, color }) {
+  const stroke = Math.max(2, size * 0.09);
+
+  return (
+    <View style={styles.fill}>
+      <Eye size={size} color={color} />
+      <View
+        style={{
+          position: 'absolute',
+          width: stroke,
+          height: size * 0.98,
+          backgroundColor: color,
+          borderRadius: stroke,
+          transform: [{ rotate: '45deg' }],
+        }}
+      />
+    </View>
+  );
+}
+
 const GLYPHS = {
   drop: Drop,
   home: Home,
@@ -445,6 +503,8 @@ const GLYPHS = {
   phone: Phone,
   list: List,
   heart: Heart,
+  eye: Eye,
+  eyeOff: EyeOff,
 };
 
 /** The names `Icon` will accept. Exported so a caller can be checked against it in review. */

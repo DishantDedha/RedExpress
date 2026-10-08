@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Platform, StyleSheet, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { AppText } from './AppText';
+import { Icon } from './Icon';
 import { announce } from './LiveMessage';
 import { focusOn } from '../hooks/useAccessibilityFocus';
 import { useHighContrast } from '../hooks/usePreferences';
@@ -50,6 +51,8 @@ export const AppTextInput = forwardRef(function AppTextInput(
     label,
     value,
     onChangeText,
+    /** Pulled out of `...rest` so the autofill reconcile below can run before it. */
+    onEndEditing,
     error,
     /** Guidance shown under the field and offered as the accessibility hint. */
     helperText,
@@ -68,6 +71,11 @@ export const AppTextInput = forwardRef(function AppTextInput(
      * still carries the word "Error".
      */
     tone = 'default',
+    /**
+     * Masks the value. Pulled out of `...rest` rather than passed straight through, because
+     * a masked field also gets a reveal toggle — see `revealed` below.
+     */
+    secureTextEntry = false,
     accessibilityLabel,
     accessibilityHint,
     containerStyle,
@@ -81,6 +89,33 @@ export const AppTextInput = forwardRef(function AppTextInput(
   const [focused, setFocused] = useState(false);
   const lastError = useRef(null);
   const contrast = useHighContrast();
+
+  /**
+   * "Show password".
+   *
+   * A masked field asks someone to type a string they cannot check, on a phone keyboard, and
+   * then blames them when it does not match. The toggle is the standard fix and it is a
+   * genuine accessibility feature, not a convenience: it is most useful to people with motor
+   * or dexterity difficulties and to anyone using an unfamiliar keyboard layout.
+   *
+   * Off by default — the value is still a secret in a public place — and it never persists
+   * between fields or mounts.
+   *
+   * The button, not the glyph, carries the name. `Icon` hides every glyph from the
+   * accessibility tree by design, so the Pressable is labelled with the action it performs
+   * and the change is announced, since a screen-reader user gets no visual confirmation
+   * that the masking changed.
+   */
+  const [revealed, setRevealed] = useState(false);
+  const canReveal = Boolean(secureTextEntry) && !disabled;
+
+  function toggleReveal() {
+    setRevealed((current) => {
+      const next = !current;
+      announce(next ? `${label} is now visible.` : `${label} is hidden.`);
+      return next;
+    });
+  }
 
   useImperativeHandle(ref, () => ({
     focus: () => inputRef.current?.focus(),
@@ -168,14 +203,35 @@ export const AppTextInput = forwardRef(function AppTextInput(
           { borderColor, borderWidth },
           disabled && styles.fieldDisabled,
           multiline && styles.fieldMultiline,
+          canReveal && styles.fieldWithToggle,
         ]}
       >
         <TextInput
           ref={inputRef}
+          secureTextEntry={canReveal ? !revealed : secureTextEntry}
           value={value}
           onChangeText={onChangeText}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          /**
+           * Catches a value the native field has but React does not.
+           *
+           * Android's autofill writes straight into the EditText. On a controlled TextInput
+           * that can land without `onChangeText` firing, and the two then disagree silently:
+           * the field shows a password, `value` is still `''`, and submitting reports "Enter
+           * a password" under a box the user can plainly see is filled. Nothing recovers on
+           * its own, because React only pushes `value` down when it *changes* — and `''` to
+           * `''` is not a change.
+           *
+           * `onEndEditing` reports what the native field actually holds, so one reconcile
+           * when focus leaves is enough. For ordinary typing the text already matches and
+           * this is a no-op.
+           */
+          onEndEditing={(event) => {
+            const native = event.nativeEvent?.text;
+            if (typeof native === 'string' && native !== value) onChangeText?.(native);
+            onEndEditing?.(event);
+          }}
           editable={!disabled}
           multiline={multiline}
           placeholder={placeholder}
@@ -197,9 +253,37 @@ export const AppTextInput = forwardRef(function AppTextInput(
           accessibilityElementsHidden={false}
           // Grows with the OS text-size setting; never disabled.
           maxFontSizeMultiplier={a11y.maxFontSizeMultiplier}
-          style={[styles.input, disabled && styles.inputDisabled, multiline && styles.inputMultiline, inputStyle]}
+          style={[
+            styles.input,
+            disabled && styles.inputDisabled,
+            multiline && styles.inputMultiline,
+            canReveal && styles.inputFlex,
+            inputStyle,
+          ]}
           {...rest}
         />
+
+        {canReveal ? (
+          <Pressable
+            onPress={toggleReveal}
+            // The field's own 48dp height plus this width makes the target square; a 24px
+            // glyph on its own would be half the minimum and unhittable in a hurry.
+            style={({ pressed }) => [styles.toggle, pressed && styles.togglePressed]}
+            accessibilityRole="button"
+            // Names the action, not the state: "Show password" is what pressing it does.
+            accessibilityLabel={revealed ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+            accessibilityHint={
+              revealed
+                ? 'Masks the characters again'
+                : 'Displays the characters so you can check what you typed'
+            }
+            // Excluded from the form's tab order would be wrong — it is a real control — but
+            // it must not be mistaken for part of the field above it.
+            accessibilityState={{ expanded: revealed }}
+          >
+            <Icon name={revealed ? 'eyeOff' : 'eye'} size={22} color={colors.text} />
+          </Pressable>
+        ) : null}
       </View>
 
       {/*
@@ -243,6 +327,12 @@ const styles = StyleSheet.create({
   },
   fieldDisabled: { backgroundColor: colors.surface },
   fieldMultiline: { minHeight: a11y.minTouchTarget * 2, paddingVertical: spacing.sm },
+  /**
+   * Row layout, and the right padding handed to the toggle so the glyph is not inset twice.
+   * Only applied when there is a toggle — a plain field keeps its original single-child
+   * centring.
+   */
+  fieldWithToggle: { flexDirection: 'row', alignItems: 'center', paddingRight: 0 },
   input: {
     ...typography.body,
     color: colors.text,
@@ -252,6 +342,16 @@ const styles = StyleSheet.create({
   },
   inputDisabled: { color: colors.textDisabled },
   inputMultiline: { textAlignVertical: 'top', minHeight: a11y.minTouchTarget * 2 },
+  /** Takes the row's spare width so the toggle sits hard against the field's right edge. */
+  inputFlex: { flex: 1 },
+  toggle: {
+    minWidth: a11y.minTouchTarget,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+  },
+  togglePressed: { opacity: 0.6 },
   message: { marginTop: spacing.xs },
   messageChip: {
     backgroundColor: colors.errorTint,

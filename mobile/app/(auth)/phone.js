@@ -140,7 +140,11 @@ export default function PhoneScreen() {
       // The backend writes these messages in plain language and they are safe to show —
       // "Too many code requests. Please wait 15 minutes and try again." is far more use
       // than a generic failure.
-      fail(error.message);
+      //
+      // The one exception is a validation failure, whose top-level message is the generic
+      // "Please check the highlighted fields." and whose usable sentence is in `fields`.
+      // This screen has a single field, so there is nothing to disambiguate.
+      fail(error.fields?.phone ?? error.message);
     } finally {
       setSending(false);
     }

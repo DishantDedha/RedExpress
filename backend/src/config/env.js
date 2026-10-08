@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { parseMasterOtpCode } from './masterOtp.js';
+import { parseTrustProxy } from './trustProxy.js';
 
 /**
  * Single place that reads process.env, so nothing else in the codebase has to guess
@@ -72,24 +73,6 @@ const isProduction = process.env.NODE_ENV === 'production';
 const otpLength = int('OTP_LENGTH', 6);
 const smsProvider = process.env.SMS_PROVIDER ?? 'console';
 
-/**
- * Express's `trust proxy` setting. Behind a load balancer or a platform router the socket
- * address is the proxy's, so every caller would share one rate-limit bucket unless
- * X-Forwarded-For is trusted. Trusting it when there is *no* proxy is the opposite mistake:
- * any client could then spoof its own IP and get a fresh bucket per request. Hence a
- * deliberate, explicit setting — a hop count (1 for one proxy) rather than a blanket `true`.
- */
-function trustProxy() {
-  const raw = process.env.TRUST_PROXY;
-  if (raw === undefined || raw === '') return false;
-  const value = raw.trim().toLowerCase();
-  if (['false', '0', 'no', 'off'].includes(value)) return false;
-  if (['true', '1', 'yes', 'on'].includes(value)) return true;
-  const hops = Number.parseInt(raw, 10);
-  if (!Number.isNaN(hops)) return hops;
-  // A named subnet or a comma list of addresses — Express understands both.
-  return raw;
-}
 
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
@@ -100,7 +83,8 @@ export const env = {
   /// so a phone on the LAN can load them without knowing how the server is mounted.
   apiBaseUrl: (process.env.API_BASE_URL ?? `http://localhost:${port}`).replace(/\/+$/, ''),
 
-  trustProxy: trustProxy(),
+  /** See config/trustProxy.js — '1' is a hop count, not boolean true. */
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
 
   bcryptRounds: int('BCRYPT_ROUNDS', 10),
 

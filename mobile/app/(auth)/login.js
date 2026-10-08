@@ -118,6 +118,16 @@ export default function LoginScreen() {
         return;
       }
 
+      // A validation failure *does* name its field — `{ fields: { phone: '…' } }` under the
+      // generic "Please check the highlighted fields." Take that when it is there, so a
+      // complaint about the number is not shown under the password box.
+      const named = ['phone', 'password'].find((name) => error.fields?.[name]);
+      if (named) {
+        hapticError();
+        fail(named, error.fields[named]);
+        return;
+      }
+
       // INVALID_CREDENTIALS and anything unexpected: attach to the password field rather than
       // the phone one, since a mistyped phone number and a wrong password read identically to
       // the backend and there is no reason to guess which one is wrong.
